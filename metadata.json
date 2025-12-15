@@ -1,0 +1,7 @@
+{
+  "name": "Aether Translate",
+  "description": "A floating, aesthetic translation practice garden with AI-powered feedback and speech.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
