@@ -2,7 +2,8 @@ export interface Paragraph {
   id: string;
   en: string; // English content
   zh: string; // Chinese content
-  userTranslation?: string; // Stored user attempt
+  userTranslationZh?: string; // User's Chinese translation (for EN_TO_ZH)
+  userTranslationEn?: string; // User's English translation (for ZH_TO_EN)
   lastPracticed?: number; // Timestamp
 }
 

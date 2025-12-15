@@ -5,18 +5,99 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Aether Translate</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: 'var(--text-main)',
+              secondary: 'var(--text-secondary)',
+              surface: 'var(--surface-hover)',
+            }
+          }
+        }
+      }
+    </script>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Noto+Serif+SC:wght@300;500;700&display=swap');
       
+      :root {
+        --bg-main: #050505;
+        --text-main: #e5e5e5;
+        --text-secondary: #9ca3af;
+        --glass-bg: rgba(20, 20, 20, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --surface-hover: rgba(255, 255, 255, 0.05);
+        --surface-active: rgba(255, 255, 255, 0.1);
+        --scrollbar-thumb: #333;
+        --scrollbar-thumb-hover: #555;
+        --particle-blue: rgba(59, 130, 246, 0.1);
+        --particle-purple: rgba(168, 85, 247, 0.1);
+        --particle-emerald: rgba(16, 185, 129, 0.05);
+        --star-color: rgba(255, 255, 255, 0.4);
+        
+        /* Diff Colors - Dark Mode */
+        --diff-match-color: rgba(167, 243, 208, 0.9);
+        --diff-match-shadow: 0 0 8px rgba(52, 211, 153, 0.3);
+        --diff-delete-color: rgba(254, 240, 138, 0.8);
+        --diff-delete-decoration: rgba(234, 179, 8, 0.3);
+        --diff-insert-color: rgba(252, 165, 165, 0.5);
+        --diff-insert-decoration: rgba(239, 68, 68, 0.3);
+      }
+
+      [data-theme="light"] {
+        --bg-main: #f0f2f5;
+        --text-main: #1f2937;
+        --text-secondary: #6b7280;
+        --glass-bg: rgba(255, 255, 255, 0.65);
+        --glass-border: rgba(0, 0, 0, 0.06);
+        --surface-hover: rgba(0, 0, 0, 0.04);
+        --surface-active: rgba(0, 0, 0, 0.08);
+        --scrollbar-thumb: #cbd5e1;
+        --scrollbar-thumb-hover: #94a3b8;
+        --particle-blue: rgba(59, 130, 246, 0.08);
+        --particle-purple: rgba(168, 85, 247, 0.08);
+        --particle-emerald: rgba(16, 185, 129, 0.05);
+        --star-color: rgba(0, 0, 0, 0.2);
+
+        /* Diff Colors - Light Mode (High Contrast) */
+        --diff-match-color: #047857; /* emerald-700 */
+        --diff-match-shadow: none;
+        --diff-delete-color: #b45309; /* amber-700 */
+        --diff-delete-decoration: #d97706; /* amber-600 */
+        --diff-insert-color: #b91c1c; /* red-700 */
+        --diff-insert-decoration: #dc2626; /* red-600 */
+      }
+
       body {
         font-family: 'Inter', sans-serif;
-        background-color: #050505;
-        color: #e5e5e5;
+        background-color: var(--bg-main);
+        color: var(--text-main);
         overflow-x: hidden;
+        transition: background-color 0.5s ease, color 0.5s ease;
       }
 
       .font-serif-sc {
         font-family: 'Noto Serif SC', serif;
+      }
+
+      /* Diff Styles */
+      .diff-match {
+        color: var(--diff-match-color);
+        text-shadow: var(--diff-match-shadow);
+      }
+      .diff-delete {
+        color: var(--diff-delete-color);
+        text-decoration: underline;
+        text-decoration-color: var(--diff-delete-decoration);
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+        margin: 0 0.25rem;
+      }
+      .diff-insert {
+        color: var(--diff-insert-color);
+        text-decoration: line-through;
+        text-decoration-color: var(--diff-insert-decoration);
       }
 
       /* Custom Scrollbar */
@@ -27,18 +108,19 @@
         background: transparent;
       }
       ::-webkit-scrollbar-thumb {
-        background: #333;
+        background: var(--scrollbar-thumb);
         border-radius: 4px;
       }
       ::-webkit-scrollbar-thumb:hover {
-        background: #555;
+        background: var(--scrollbar-thumb-hover);
       }
 
       .glass-panel {
-        background: rgba(20, 20, 20, 0.6);
+        background: var(--glass-bg);
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--glass-border);
+        transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
       }
       
       /* Animation Keyframes */
@@ -76,5 +158,6 @@
 </head>
   <body>
     <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
   </body>
 </html>
