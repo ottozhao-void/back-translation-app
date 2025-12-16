@@ -709,7 +709,7 @@ const PracticeSession: React.FC<{
 
         {/* Input/Result Card */}
         <div 
-          className={`flex-1 glass-panel rounded-2xl p-8 flex flex-col relative transition-all duration-500 ease-out transform delay-75
+          className={`flex-1 glass-panel input-glow rounded-2xl p-8 flex flex-col relative transition-all duration-500 ease-out transform delay-75
             ${animDirection === 1 ? '-translate-x-20 opacity-0 scale-95' : animDirection === -1 ? 'translate-x-20 opacity-0 scale-95' : 'translate-x-0 opacity-100 scale-100'}
           `}
         >
@@ -756,11 +756,12 @@ const PracticeSession: React.FC<{
             <div className="mt-4 flex justify-end">
               <button 
                 onClick={handleSubmit}
-                className="border px-6 py-2 rounded-lg text-sm transition-all flex items-center gap-2 hover:bg-[var(--surface-hover)]"
-                style={{ borderColor: 'var(--glass-border)', color: 'var(--text-main)' }}
+                disabled={!inputValue.trim()}
+                className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
+                  ${inputValue.trim() ? 'active' : ''}`}
               >
                 <span>Check</span>
-                <span className="text-[10px] opacity-50 ml-1">⏎</span>
+                <span className={`text-[10px] ml-1 ${inputValue.trim() ? 'opacity-60' : 'opacity-20'}`}>⏎</span>
               </button>
             </div>
           )}

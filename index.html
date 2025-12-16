@@ -43,6 +43,19 @@
         --diff-delete-decoration: rgba(234, 179, 8, 0.3);
         --diff-insert-color: rgba(252, 165, 165, 0.5);
         --diff-insert-decoration: rgba(239, 68, 68, 0.3);
+
+        /* Input Glow - Dark Mode */
+        --glow-idle: rgba(255, 255, 255, 0.05);
+        --glow-focus-inner: rgba(255, 255, 255, 0.5);
+        --glow-focus-outer: rgba(255, 255, 255, 0.15);
+        --glow-border-focus: rgba(255, 255, 255, 0.3);
+
+        /* Button Colors - Dark Mode */
+        --btn-primary-bg: #ffffff;
+        --btn-primary-text: #000000;
+        --btn-primary-shadow: rgba(255, 255, 255, 0.2);
+        --btn-disabled-bg: rgba(255, 255, 255, 0.05);
+        --btn-disabled-text: rgba(255, 255, 255, 0.2);
       }
 
       [data-theme="light"] {
@@ -67,6 +80,19 @@
         --diff-delete-decoration: #d97706; /* amber-600 */
         --diff-insert-color: #b91c1c; /* red-700 */
         --diff-insert-decoration: #dc2626; /* red-600 */
+
+        /* Input Glow - Light Mode */
+        --glow-idle: rgba(0, 0, 0, 0.04);
+        --glow-focus-inner: rgba(0, 0, 0, 0.3);
+        --glow-focus-outer: rgba(0, 0, 0, 0.1);
+        --glow-border-focus: rgba(0, 0, 0, 0.2);
+
+        /* Button Colors - Light Mode */
+        --btn-primary-bg: #1f2937;
+        --btn-primary-text: #ffffff;
+        --btn-primary-shadow: rgba(0, 0, 0, 0.15);
+        --btn-disabled-bg: rgba(0, 0, 0, 0.05);
+        --btn-disabled-text: rgba(0, 0, 0, 0.2);
       }
 
       body {
@@ -121,6 +147,39 @@
         -webkit-backdrop-filter: blur(16px);
         border: 1px solid var(--glass-border);
         transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+      }
+
+      .input-glow {
+        box-shadow: 0 0 60px -15px var(--glow-idle);
+        transition: box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.5s ease;
+      }
+
+      .input-glow:focus-within {
+        box-shadow: 
+          0 0 20px -5px var(--glow-focus-inner),
+          0 0 50px 0px var(--glow-focus-outer);
+        border-color: var(--glow-border-focus);
+      }
+
+      /* Button Styles */
+      .btn-check {
+        background-color: var(--btn-disabled-bg);
+        color: var(--btn-disabled-text);
+        cursor: not-allowed;
+        transition: all 0.3s ease;
+      }
+      .btn-check.active {
+        background-color: var(--btn-primary-bg);
+        color: var(--btn-primary-text);
+        box-shadow: 0 0 20px var(--btn-primary-shadow);
+        cursor: pointer;
+      }
+      .btn-check.active:hover {
+        transform: scale(1.05);
+        box-shadow: 0 0 25px var(--btn-primary-shadow);
+      }
+      .btn-check.active:active {
+        transform: scale(0.95);
       }
       
       /* Animation Keyframes */
