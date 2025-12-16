@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Article, PracticeMode, DiffPart, DiffType, Paragraph } from './types';
+import { Article, PracticeMode, DiffPart, DiffType, Paragraph, UserTranslation, FeedbackMode, TranslationRecord } from './types';
 import { playTextToSpeech } from './services/geminiService';
 import { computeDiff } from './utils/diffUtils';
-import { fetchArticles, parseArticle, saveArticleToServer, deleteArticleFromServer, serializeArticle } from './utils/articleLoader';
+import { fetchArticles, parseArticle, parseMarkdownArticle, saveArticleToServer, deleteArticleFromServer, serializeArticle } from './utils/articleLoader';
 
 // --- Constants for Persistence ---
 const STORAGE_KEYS = {
@@ -148,9 +148,18 @@ const App: React.FC = () => {
   };
 
   const handleArticleUpload = async (fileContent: string, filename: string) => {
-    const success = await saveArticleToServer(filename, fileContent);
+    // Parse first to get the object structure (handles MD parsing)
+    const article = parseMarkdownArticle(fileContent, filename);
+    
+    // Serialize to JSON
+    const jsonContent = serializeArticle(article);
+    
+    // Change extension to .json
+    const jsonFilename = filename.replace(/\.(md|txt)$/i, '') + '.json';
+    
+    const success = await saveArticleToServer(jsonFilename, jsonContent);
     if (success) {
-      const newArticle = parseArticle(fileContent, filename);
+      const newArticle = { ...article, id: jsonFilename };
       setArticles(prev => [newArticle, ...prev]);
     } else {
       alert("Failed to save article to server.");
@@ -176,36 +185,94 @@ const App: React.FC = () => {
     setSelectedArticle(null);
   };
 
-  const updateArticleProgress = async (articleId: string, paragraphId: string, userTranslation: string) => {
-    // 1. Update State
-    let updatedArticle: Article | undefined;
+  const updateArticleProgress = async (articleId: string, paragraphId: string, newTranslation: UserTranslation) => {
+    // Find the article in current state
+    const articleIndex = articles.findIndex(a => a.id === articleId);
+    if (articleIndex === -1) return;
     
-    setArticles(prev => {
-      const newArticles = prev.map(art => {
-        if (art.id !== articleId) return art;
-        updatedArticle = {
-          ...art,
-          content: art.content.map(p => {
-            if (p.id !== paragraphId) return p;
-            const newP = { ...p, lastPracticed: Date.now() };
-            if (practiceMode === 'EN_TO_ZH') {
-              newP.userTranslationZh = userTranslation;
-            } else {
-              newP.userTranslationEn = userTranslation;
+    const article = articles[articleIndex];
+    let updatedArticle: Article = { ...article };
+    let hasChanges = false;
+
+    updatedArticle.content = article.content.map(p => {
+        if (p.id !== paragraphId) return p;
+
+        // Get existing translation
+        const existingTranslation = practiceMode === 'EN_TO_ZH' ? p.userTranslationZh : p.userTranslationEn;
+        
+        let finalTranslation = newTranslation;
+
+        if (existingTranslation) {
+            const isTextSame = existingTranslation.text === newTranslation.text;
+            const isScoreSame = existingTranslation.score === newTranslation.score;
+
+            if (isTextSame && isScoreSame) {
+                // 1. Consistent text and score -> No operation
+                return p;
+            } 
+            
+            if (isTextSame && !isScoreSame) {
+                // 2. Text same, score changed -> Update score of this submission.
+                hasChanges = true;
+                finalTranslation = {
+                    ...existingTranslation,
+                    score: newTranslation.score,
+                    // Keep original timestamp and history
+                    history: existingTranslation.history 
+                };
             }
-            return newP;
-          })
-        };
-        return updatedArticle;
-      });
-      return newArticles;
+
+            if (!isTextSame) {
+                // 3. Text different -> Create new record.
+                hasChanges = true;
+                // The old record becomes history.
+                const oldRecord: TranslationRecord = {
+                    type: existingTranslation.type,
+                    text: existingTranslation.text,
+                    timestamp: existingTranslation.timestamp,
+                    score: existingTranslation.score
+                };
+                
+                finalTranslation = {
+                    ...newTranslation,
+                    history: [
+                        ...(existingTranslation.history || []),
+                        oldRecord
+                    ]
+                };
+            }
+        } else {
+            hasChanges = true;
+        }
+
+        const newP = { ...p, lastPracticed: Date.now() };
+        if (practiceMode === 'EN_TO_ZH') {
+            newP.userTranslationZh = finalTranslation;
+        } else {
+            newP.userTranslationEn = finalTranslation;
+        }
+        return newP;
     });
 
-    // 2. Persist to Server (File)
-    if (updatedArticle) {
-      const fileContent = serializeArticle(updatedArticle);
-      await saveArticleToServer(articleId, fileContent);
+    if (!hasChanges) return;
+
+    // Update State
+    setArticles(prev => {
+        const newArr = [...prev];
+        newArr[articleIndex] = updatedArticle;
+        return newArr;
+    });
+
+    // Persist to Server (File)
+    const fileContent = serializeArticle(updatedArticle);
+    // Save as JSON
+    let filename = articleId;
+    if (filename.endsWith('.md')) {
+        filename = filename.replace(/\.md$/, '.json');
+    } else if (!filename.endsWith('.json')) {
+        filename += '.json';
     }
+    await saveArticleToServer(filename, fileContent);
   };
 
   return (
@@ -482,7 +549,7 @@ const ModeSelector: React.FC<{ article: Article, onSelectMode: (m: PracticeMode)
 const PracticeSession: React.FC<{
   article: Article;
   mode: PracticeMode;
-  onUpdateProgress: (aId: string, pId: string, val: string) => void;
+  onUpdateProgress: (aId: string, pId: string, val: UserTranslation) => void;
   onBack: () => void;
 }> = ({ article, mode, onUpdateProgress, onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -490,6 +557,9 @@ const PracticeSession: React.FC<{
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [animDirection, setAnimDirection] = useState(0); // -1 left, 1 right
+  
+  const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>('diff');
+  const [score, setScore] = useState<string>('');
 
   const currentParagraph = article.content[currentIndex];
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -503,10 +573,14 @@ const PracticeSession: React.FC<{
       : currentParagraph.userTranslationEn;
     
     if (savedTranslation) {
-      setInputValue(savedTranslation);
+      setInputValue(savedTranslation.text);
+      setFeedbackMode(savedTranslation.type);
+      setScore(savedTranslation.score ? savedTranslation.score.toString() : '');
       setIsSubmitted(true);
     } else {
       setInputValue('');
+      setFeedbackMode('diff'); // Default
+      setScore('');
       setIsSubmitted(false);
     }
     setShowHint(false);
@@ -552,12 +626,52 @@ const PracticeSession: React.FC<{
 
   const handleSubmit = () => {
     if (!inputValue.trim()) return;
+
+    let finalScore: number | undefined;
+    if (feedbackMode === 'llm') {
+        const s = parseInt(score);
+        if (isNaN(s) || s < 1 || s > 100) {
+            alert("Please enter a valid score between 1 and 100.");
+            return;
+        }
+        finalScore = s;
+    }
+
     setIsSubmitted(true);
-    onUpdateProgress(article.id, currentParagraph.id, inputValue);
+    onUpdateProgress(article.id, currentParagraph.id, {
+        type: feedbackMode,
+        text: inputValue,
+        timestamp: Date.now(),
+        score: finalScore
+    });
+  };
+
+  const handleCopyPrompt = () => {
+      const sourceText = mode === 'EN_TO_ZH' ? currentParagraph.en : currentParagraph.zh;
+      const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh : currentParagraph.en;
+      
+      const prompt = `
+# Original Text
+
+${sourceText}
+
+# Original Translation
+
+${targetText}
+
+Please evalutate my translation below and provide detailed feedback and a score on a scale of 1 to 100
+
+# My Translation
+
+${inputValue}
+`;
+      navigator.clipboard.writeText(prompt).then(() => {
+          alert("Prompt copied to clipboard!");
+      });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const isInput = (e.target as HTMLElement).tagName === 'TEXTAREA';
+    const isInput = (e.target as HTMLElement).tagName === 'TEXTAREA' || (e.target as HTMLElement).tagName === 'INPUT';
 
     // Global: E for Edit (only when submitted)
     if (isSubmitted && (e.key === 'e' || e.key === 'E')) {
@@ -585,9 +699,27 @@ const PracticeSession: React.FC<{
 
     // Submit / Action
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+      // In LLM mode, Enter in textarea shouldn't submit immediately if we want them to copy prompt first?
+      // But usually Enter submits.
+      // If in score input, Enter should submit.
       if (!isSubmitted) {
-        handleSubmit();
+         // If LLM mode, maybe don't submit on Enter in textarea?
+         // Let's keep it consistent: Ctrl+Enter or just Enter if not multiline?
+         // Textarea usually needs Enter for newlines.
+         // But here we preventDefault.
+         // Let's say Ctrl+Enter for submit in textarea, or just button.
+         // The original code used Enter for submit.
+         if (feedbackMode === 'llm' && (e.target as HTMLElement).tagName === 'TEXTAREA') {
+             // Allow newlines in LLM mode? Or just submit?
+             // Let's allow newlines and require button or Ctrl+Enter
+             if (e.ctrlKey || e.metaKey) {
+                 handleSubmit();
+             }
+             return; // Don't prevent default Enter
+         }
+         
+         e.preventDefault();
+         handleSubmit();
       }
     } 
     
@@ -604,11 +736,11 @@ const PracticeSession: React.FC<{
   
   // For Diff
   const diffs = useMemo(() => {
-    if (!isSubmitted) return [];
+    if (!isSubmitted || feedbackMode !== 'diff') return [];
     // If EN_TO_ZH, user types Chinese (use char diff). If ZH_TO_EN, user types English (use word diff).
     const diffMode = mode === 'EN_TO_ZH' ? 'char' : 'word';
     return computeDiff(targetText, inputValue, diffMode);
-  }, [isSubmitted, inputValue, targetText, mode]);
+  }, [isSubmitted, inputValue, targetText, mode, feedbackMode]);
 
   return (
     <div 
@@ -714,9 +846,30 @@ const PracticeSession: React.FC<{
           `}
         >
            <div className="flex justify-between items-start mb-6">
-            <div className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
-              {isSubmitted ? 'Feedback' : 'Your Translation'}
+            <div className="flex items-center gap-4">
+                <div className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
+                {isSubmitted ? 'Feedback' : 'Your Translation'}
+                </div>
+                
+                {/* Mode Toggle */}
+                {!isSubmitted && (
+                    <div className="flex items-center bg-[var(--surface-hover)] rounded-full p-1 border border-[var(--glass-border)]">
+                        <button
+                            onClick={() => setFeedbackMode('diff')}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${feedbackMode === 'diff' ? 'bg-[var(--text-main)] text-[var(--bg-main)]' : 'text-[var(--text-secondary)]'}`}
+                        >
+                            DIFF
+                        </button>
+                        <button
+                            onClick={() => setFeedbackMode('llm')}
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${feedbackMode === 'llm' ? 'bg-[var(--text-main)] text-[var(--bg-main)]' : 'text-[var(--text-secondary)]'}`}
+                        >
+                            LLM
+                        </button>
+                    </div>
+                )}
             </div>
+
             {isSubmitted && (
                <div className="flex gap-4">
                   <span className="text-[10px] border px-1.5 py-0.5 rounded" style={{ color: 'var(--text-secondary)', borderColor: 'var(--text-secondary)' }}>E to Edit</span>
@@ -743,29 +896,75 @@ const PracticeSession: React.FC<{
               />
             ) : (
               <div className="text-xl leading-relaxed font-serif-sc overflow-y-auto flex-1 pr-2 custom-scrollbar break-words whitespace-pre-wrap">
-                {diffs.map((part, i) => (
-                   <span key={i} className={getDiffStyle(part.type)}>
-                     {part.value}
-                   </span>
-                ))}
+                {feedbackMode === 'diff' ? (
+                    diffs.map((part, i) => (
+                    <span key={i} className={getDiffStyle(part.type)}>
+                        {part.value}
+                    </span>
+                    ))
+                ) : (
+                    <div className="flex flex-col gap-4">
+                        <div className="p-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-hover)]">
+                            <div className="text-xs uppercase tracking-widest mb-2 opacity-50">Score</div>
+                            <div className="text-4xl font-bold text-emerald-400">{score}</div>
+                        </div>
+                        <div>
+                            <div className="text-xs uppercase tracking-widest mb-2 opacity-50">Your Translation</div>
+                            <p>{inputValue}</p>
+                        </div>
+                    </div>
+                )}
               </div>
             )}
           </div>
 
           {!isSubmitted && (
-            <div className="mt-4 flex justify-end">
-              <button 
-                onClick={handleSubmit}
-                disabled={!inputValue.trim()}
-                className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
-                  ${inputValue.trim() ? 'active' : ''}`}
-              >
-                <span>Check</span>
-                <span className={`text-[10px] ml-1 ${inputValue.trim() ? 'opacity-60' : 'opacity-20'}`}>⏎</span>
-              </button>
+            <div className="mt-4 flex justify-between items-end">
+              {feedbackMode === 'llm' ? (
+                  <div className="flex gap-4 w-full items-end">
+                      <div className="flex-1">
+                          <label className="text-[10px] uppercase tracking-widest mb-1 block opacity-70">Score (1-100)</label>
+                          <input 
+                            type="number" 
+                            min="1" 
+                            max="100"
+                            value={score}
+                            onChange={(e) => setScore(e.target.value)}
+                            className="w-full bg-[var(--surface-hover)] border border-[var(--glass-border)] rounded px-3 py-2 outline-none focus:border-[var(--text-main)] transition-colors"
+                            placeholder="Score"
+                          />
+                      </div>
+                      <button
+                        onClick={handleCopyPrompt}
+                        className="px-4 py-2 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+                      >
+                          <span>Copy Prompt</span>
+                      </button>
+                      <button 
+                        onClick={handleSubmit}
+                        disabled={!inputValue.trim() || !score}
+                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
+                        ${inputValue.trim() && score ? 'active' : ''}`}
+                    >
+                        <span>Submit</span>
+                    </button>
+                  </div>
+              ) : (
+                <div className="flex justify-end w-full">
+                    <button 
+                        onClick={handleSubmit}
+                        disabled={!inputValue.trim()}
+                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
+                        ${inputValue.trim() ? 'active' : ''}`}
+                    >
+                        <span>Check</span>
+                        <span className={`text-[10px] ml-1 ${inputValue.trim() ? 'opacity-60' : 'opacity-20'}`}>⏎</span>
+                    </button>
+                </div>
+              )}
             </div>
           )}
-          {isSubmitted && (
+          {isSubmitted && feedbackMode === 'diff' && (
              <div className="mt-4 flex justify-between items-center border-t pt-4" style={{ borderColor: 'var(--glass-border)' }}>
                 <div className="flex gap-3 text-xs items-center" style={{ color: 'var(--text-secondary)' }}>
                   <span>Results</span>

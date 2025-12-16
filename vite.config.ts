@@ -8,15 +8,15 @@ const articleServerPlugin = (): Plugin => {
     name: 'article-server-plugin',
     configureServer(server) {
       server.middlewares.use('/api/articles', async (req, res, next) => {
-        const articlesDir = path.resolve(__dirname, 'articles');
+        const articlesDir = path.resolve(__dirname, 'public', 'articles');
         
         if (!fs.existsSync(articlesDir)) {
-          fs.mkdirSync(articlesDir);
+          fs.mkdirSync(articlesDir, { recursive: true });
         }
 
         try {
           if (req.method === 'GET') {
-            const files = fs.readdirSync(articlesDir).filter(f => f.endsWith('.md') || f.endsWith('.txt'));
+            const files = fs.readdirSync(articlesDir).filter(f => f.endsWith('.md') || f.endsWith('.txt') || f.endsWith('.json'));
             res.setHeader('Content-Type', 'application/json');
             res.end(JSON.stringify(files));
             return;

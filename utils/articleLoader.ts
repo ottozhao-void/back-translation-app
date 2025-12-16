@@ -1,14 +1,23 @@
-import { Article, Paragraph } from '../types';
+import { Article, Paragraph, UserTranslation } from '../types';
+import { ARTICLE_FILENAMES } from '../constants';
 
 /**
- * Parses raw markdown content into an Article object.
- * Expects format:
- * # 英文原文
- * [English Paragraphs]
- * # 中文原文
- * [Chinese Paragraphs]
+ * Parses content into an Article object.
+ * Handles both legacy Markdown and new JSON format.
  */
-export const parseArticle = (text: string, id: string): Article => {
+export const parseArticle = (text: string, id: string): Article | null => {
+  try {
+    const json = JSON.parse(text);
+    if (json.content && Array.isArray(json.content)) {
+      return { ...json, id };
+    }
+  } catch (e) {
+    // Ignore
+  }
+  return null;
+};
+
+export const parseMarkdownArticle = (text: string, id: string): Article => {
   // Normalize line endings and split
   const lines = text.split(/\r?\n/);
   const enLines: string[] = [];
@@ -82,14 +91,23 @@ export const parseArticle = (text: string, id: string): Article => {
   const maxLen = Math.max(enParagraphs.length, zhParagraphs.length);
 
   for (let i = 0; i < maxLen; i++) {
-    const userTransZh = userZhParagraphs[i];
-    const userTransEn = userEnParagraphs[i];
+    const userTransZhStr = userZhParagraphs[i];
+    const userTransEnStr = userEnParagraphs[i];
+    
+    const userTranslationZh: UserTranslation | undefined = (userTransZhStr && userTransZhStr !== "(no translation)") 
+      ? { type: 'diff', text: userTransZhStr, timestamp: Date.now() } 
+      : undefined;
+
+    const userTranslationEn: UserTranslation | undefined = (userTransEnStr && userTransEnStr !== "(no translation)")
+      ? { type: 'diff', text: userTransEnStr, timestamp: Date.now() }
+      : undefined;
+
     content.push({
       id: `${id}_p${i}`,
       en: enParagraphs[i] || "",
       zh: zhParagraphs[i] || "",
-      userTranslationZh: (userTransZh === "(no translation)" ? "" : userTransZh) || "",
-      userTranslationEn: (userTransEn === "(no translation)" ? "" : userTransEn) || "",
+      userTranslationZh,
+      userTranslationEn,
     });
   }
 
@@ -114,12 +132,7 @@ export const parseArticle = (text: string, id: string): Article => {
 };
 
 export const serializeArticle = (article: Article): string => {
-  const enText = article.content.map(p => p.en).join('\n\n');
-  const zhText = article.content.map(p => p.zh).join('\n\n');
-  const userZhText = article.content.map(p => p.userTranslationZh || "(no translation)").join('\n\n');
-  const userEnText = article.content.map(p => p.userTranslationEn || "(no translation)").join('\n\n');
-
-  return `# 英文原文\n${enText}\n\n# 中文原文\n${zhText}\n\n# 用户译文 (英译中)\n${userZhText}\n\n# 用户译文 (中译英)\n${userEnText}`;
+  return JSON.stringify(article, null, 2);
 };
 
 /**
@@ -127,16 +140,25 @@ export const serializeArticle = (article: Article): string => {
  */
 export const fetchArticles = async (): Promise<Article[]> => {
   try {
-    // 1. Get list of files from API
-    const listResponse = await fetch('/api/articles');
-    if (!listResponse.ok) {
+    // 1. Get list of files from API or Fallback
+    let filenames: string[] = [];
+    try {
+      const listResponse = await fetch('/api/articles');
+      if (listResponse.ok) {
+        filenames = await listResponse.json();
+      } else {
+        // Fallback if API returns 404 or other error
+        filenames = ARTICLE_FILENAMES;
+      }
+    } catch (e) {
       console.warn('API not available, falling back to static list');
-      return []; 
+      filenames = ARTICLE_FILENAMES; 
     }
-    const filenames: string[] = await listResponse.json();
+
+    const jsonFiles = filenames.filter(f => f.endsWith('.json'));
 
     // 2. Fetch content for each file
-    const promises = filenames.map(async (filename) => {
+    const promises = jsonFiles.map(async (filename) => {
       try {
         // Add timestamp to prevent caching
         const response = await fetch(`./articles/${filename}?t=${Date.now()}`);

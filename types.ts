@@ -1,9 +1,22 @@
+export type FeedbackMode = 'diff' | 'llm';
+
+export interface TranslationRecord {
+  type: FeedbackMode;
+  text: string;
+  timestamp: number;
+  score?: number;
+}
+
+export interface UserTranslation extends TranslationRecord {
+  history?: TranslationRecord[];
+}
+
 export interface Paragraph {
   id: string;
   en: string; // English content
   zh: string; // Chinese content
-  userTranslationZh?: string; // User's Chinese translation (for EN_TO_ZH)
-  userTranslationEn?: string; // User's English translation (for ZH_TO_EN)
+  userTranslationZh?: UserTranslation; // User's Chinese translation (for EN_TO_ZH)
+  userTranslationEn?: UserTranslation; // User's English translation (for ZH_TO_EN)
   lastPracticed?: number; // Timestamp
 }
 
