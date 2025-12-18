@@ -53,6 +53,36 @@ app.post('/api/articles', (req, res) => {
     }
 });
 
+app.post('/api/articles/rename', (req, res) => {
+    try {
+        const { oldFilename, newFilename } = req.body;
+        if (!oldFilename || !newFilename) return res.status(400).json({ error: 'Missing filenames' });
+
+        const safeOldFilename = path.basename(oldFilename);
+        const safeNewFilename = path.basename(newFilename);
+        
+        const oldPath = path.join(articlesDir, safeOldFilename);
+        const newPath = path.join(articlesDir, safeNewFilename);
+
+        if (!fs.existsSync(oldPath)) return res.status(404).json({ error: 'File not found' });
+        if (fs.existsSync(newPath)) return res.status(409).json({ error: 'New filename already exists' });
+
+        fs.renameSync(oldPath, newPath);
+
+        // Also rename in dist if it exists
+        const oldDistPath = path.join(distArticlesDir, safeOldFilename);
+        const newDistPath = path.join(distArticlesDir, safeNewFilename);
+        if (fs.existsSync(oldDistPath)) {
+             fs.renameSync(oldDistPath, newDistPath);
+        }
+
+        res.json({ success: true, newFilename: safeNewFilename });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ error: 'Failed to rename file' });
+    }
+});
+
 app.delete('/api/articles', (req, res) => {
     try {
         const filename = req.query.filename;

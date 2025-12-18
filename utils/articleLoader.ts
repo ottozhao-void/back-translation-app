@@ -214,3 +214,19 @@ export const deleteArticleFromServer = async (filename: string): Promise<boolean
     return false;
   }
 };
+
+export const renameArticleOnServer = async (oldFilename: string, newFilename: string): Promise<boolean> => {
+  try {
+    const response = await fetch('/api/articles/rename', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ oldFilename, newFilename }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error('Failed to rename article', error);
+    return false;
+  }
+};
