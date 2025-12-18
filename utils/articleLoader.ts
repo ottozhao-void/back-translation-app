@@ -161,7 +161,7 @@ export const fetchArticles = async (): Promise<Article[]> => {
     const promises = jsonFiles.map(async (filename) => {
       try {
         // Add timestamp to prevent caching
-        const response = await fetch(`./articles/${filename}?t=${Date.now()}`);
+        const response = await fetch(`/articles/${filename}?t=${Date.now()}`);
         if (!response.ok) {
           throw new Error(`Failed to load ${filename}: ${response.statusText}`);
         }

@@ -27,6 +27,7 @@
         --text-secondary: #9ca3af;
         --glass-bg: rgba(20, 20, 20, 0.6);
         --glass-border: rgba(255, 255, 255, 0.08);
+        --border-high-contrast: rgba(255, 255, 255, 0.6);
         --surface-hover: rgba(255, 255, 255, 0.05);
         --surface-active: rgba(255, 255, 255, 0.1);
         --scrollbar-thumb: #333;
@@ -35,6 +36,8 @@
         --particle-purple: rgba(168, 85, 247, 0.1);
         --particle-emerald: rgba(16, 185, 129, 0.05);
         --star-color: rgba(255, 255, 255, 0.4);
+        --glow-weak: 0 0 40px rgba(255, 255, 255, 0.05);
+        --glow-strong: 0 0 60px rgba(255, 255, 255, 0.2);
       }
 
       [data-theme="light"] {
@@ -43,6 +46,7 @@
         --text-secondary: #6b7280;
         --glass-bg: rgba(255, 255, 255, 0.65);
         --glass-border: rgba(0, 0, 0, 0.06);
+        --border-high-contrast: rgba(0, 0, 0, 0.6);
         --surface-hover: rgba(0, 0, 0, 0.04);
         --surface-active: rgba(0, 0, 0, 0.08);
         --scrollbar-thumb: #cbd5e1;
@@ -51,6 +55,8 @@
         --particle-purple: rgba(168, 85, 247, 0.08);
         --particle-emerald: rgba(16, 185, 129, 0.05);
         --star-color: rgba(0, 0, 0, 0.2);
+        --glow-weak: 0 0 40px rgba(0, 0, 0, 0.05);
+        --glow-strong: 0 0 60px rgba(0, 0, 0, 0.2);
       }
 
       body {
@@ -87,6 +93,14 @@
         border: 1px solid var(--glass-border);
         transition: background 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
       }
+
+      .input-glow {
+        box-shadow: var(--glow-weak);
+      }
+
+      .input-glow:focus-within {
+        box-shadow: var(--glow-strong);
+      }
       
       /* Animation Keyframes */
       @keyframes float {
@@ -108,6 +122,21 @@
 
       .particle-blob {
         animation: drift 20s infinite alternate ease-in-out;
+      }
+
+      /* Diff Styles */
+      .diff-match {
+        color: #10b981;
+      }
+      .diff-insert {
+        color: #ef4444;
+        text-decoration: line-through;
+        text-decoration-color: #ef4444;
+        opacity: 0.8;
+      }
+      .diff-delete {
+        color: #eab308;
+        /* For missing text, we want to show it so the user knows what they missed */
       }
     </style>
   <script type="importmap">

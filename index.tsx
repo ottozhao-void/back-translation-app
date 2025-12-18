@@ -166,6 +166,25 @@ const App: React.FC = () => {
     }
   };
 
+  const handleArticleCreate = async (title: string, content: string) => {
+    // Generate filename from title
+    const safeTitle = title.replace(/[^a-z0-9\u4e00-\u9fa5]/gi, '_').toLowerCase();
+    const filename = `${Date.now()}_${safeTitle}.json`;
+
+    const article = parseMarkdownArticle(content, filename);
+    article.title = title; // Override title
+    
+    const jsonContent = serializeArticle(article);
+    
+    const success = await saveArticleToServer(filename, jsonContent);
+    if (success) {
+      const newArticle = { ...article, id: filename };
+      setArticles(prev => [newArticle, ...prev]);
+    } else {
+      alert("Failed to save article to server.");
+    }
+  };
+
   const handleArticleDelete = async (articleId: string) => {
     const success = await deleteArticleFromServer(articleId);
     if (success) {
@@ -216,6 +235,7 @@ const App: React.FC = () => {
                 hasChanges = true;
                 finalTranslation = {
                     ...existingTranslation,
+                    type: newTranslation.type,
                     score: newTranslation.score,
                     // Keep original timestamp and history
                     history: existingTranslation.history 
@@ -295,7 +315,7 @@ const App: React.FC = () => {
           <button 
             onClick={toggleTheme}
             className="p-2 rounded-full transition-all duration-300 hover:scale-110"
-            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)' }}
+            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border-high-contrast)' }}
             title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
@@ -315,6 +335,7 @@ const App: React.FC = () => {
             articles={articles} 
             onSelect={handleArticleSelect} 
             onUpload={handleArticleUpload}
+            onCreate={handleArticleCreate}
             onDelete={handleArticleDelete}
           />
         )}
@@ -338,15 +359,133 @@ const App: React.FC = () => {
   );
 };
 
+// --- Component: Upload Modal ---
+const UploadModal: React.FC<{ 
+  onClose: () => void, 
+  onUploadFile: () => void, 
+  onCreate: (title: string, content: string) => void 
+}> = ({ onClose, onUploadFile, onCreate }) => {
+  const [mode, setMode] = useState<'SELECT' | 'CREATE'>('SELECT');
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+
+  // Prevent background scrolling
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = 'auto'; };
+  }, []);
+
+  const handleCreate = () => {
+    if (!title.trim()) {
+      alert("Please enter a title.");
+      return;
+    }
+    if (!content.includes('# 英文原文') || !content.includes('# 中文原文')) {
+      alert("Format Error: Content must contain '# 英文原文' and '# 中文原文' sections.");
+      return;
+    }
+    onCreate(title, content);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 backdrop-blur-sm transition-opacity"
+        style={{ backgroundColor: 'rgba(0,0,0,0.7)' }}
+        onClick={onClose}
+      />
+      
+      <div className="relative w-full max-w-2xl glass-panel rounded-2xl flex flex-col shadow-2xl animate-[float_0.3s_ease-out] overflow-hidden">
+        
+        {mode === 'SELECT' ? (
+          <div className="p-12 flex flex-col items-center">
+            <h2 className="text-2xl font-serif-sc mb-8" style={{ color: 'var(--text-main)' }}>Add New Article</h2>
+            <div className="flex gap-8 w-full justify-center">
+              <button 
+                onClick={() => { onUploadFile(); onClose(); }}
+                className="flex-1 h-48 glass-panel rounded-xl flex flex-col items-center justify-center gap-4 transition-all duration-300 hover:bg-[var(--surface-hover)] hover:scale-105 border border-[var(--border-high-contrast)]"
+              >
+                <UploadIcon />
+                <span className="font-mono tracking-widest uppercase text-sm">Upload File</span>
+              </button>
+              <button 
+                onClick={() => setMode('CREATE')}
+                className="flex-1 h-48 glass-panel rounded-xl flex flex-col items-center justify-center gap-4 transition-all duration-300 hover:bg-[var(--surface-hover)] hover:scale-105 border border-[var(--border-high-contrast)]"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                </svg>
+                <span className="font-mono tracking-widest uppercase text-sm">Create New</span>
+              </button>
+            </div>
+            <button onClick={onClose} className="mt-8 text-sm hover:underline" style={{ color: 'var(--text-secondary)' }}>Cancel</button>
+          </div>
+        ) : (
+          <div className="flex flex-col h-[80vh]">
+            <div className="flex items-center justify-between p-6 border-b" style={{ borderColor: 'var(--glass-border)' }}>
+              <input 
+                type="text" 
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Enter Article Title..."
+                className="text-xl font-serif-sc bg-transparent outline-none w-full placeholder-opacity-50"
+                style={{ color: 'var(--text-main)' }}
+                autoFocus
+              />
+              <button 
+                onClick={onClose}
+                className="transition-colors p-2 rounded-full hover:bg-[var(--surface-hover)] ml-4"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <XMarkIcon />
+              </button>
+            </div>
+            
+            <div className="flex-1 p-6 overflow-hidden flex flex-col">
+              <textarea 
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={`# 英文原文\nPaste English text here...\n\n# 中文原文\nPaste Chinese text here...`}
+                className="flex-1 w-full bg-transparent resize-none outline-none font-mono text-sm leading-relaxed custom-scrollbar p-4 rounded-lg border border-dashed border-[var(--border-high-contrast)] focus:border-solid focus:border-[var(--text-secondary)] transition-all"
+                style={{ color: 'var(--text-main)' }}
+              />
+            </div>
+            
+            <div className="p-6 border-t flex justify-between items-center" style={{ borderColor: 'var(--glass-border)' }}>
+               <button 
+                 onClick={() => setMode('SELECT')}
+                 className="text-sm hover:underline"
+                 style={{ color: 'var(--text-secondary)' }}
+               >
+                 Back
+               </button>
+               <button 
+                 onClick={handleCreate}
+                 className="px-6 py-2 rounded-lg text-sm font-medium transition-colors"
+                 style={{ backgroundColor: 'var(--text-main)', color: 'var(--bg-main)' }}
+               >
+                 Save Article
+               </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // --- View: Article List ---
 const ArticleList: React.FC<{ 
   articles: Article[], 
   onSelect: (a: Article) => void,
   onUpload: (content: string, filename: string) => void,
+  onCreate: (title: string, content: string) => void,
   onDelete: (id: string) => void
-}> = ({ articles, onSelect, onUpload, onDelete }) => {
+}> = ({ articles, onSelect, onUpload, onCreate, onDelete }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewArticle, setPreviewArticle] = useState<Article | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -387,9 +526,9 @@ const ArticleList: React.FC<{
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pt-10 pb-20 fade-in max-w-7xl mx-auto">
         {/* Upload Card */}
         <div 
-          onClick={() => fileInputRef.current?.click()}
+          onClick={() => setShowUploadModal(true)}
           className="group glass-panel rounded-xl overflow-hidden cursor-pointer transition-all duration-500 border-dashed border-2 flex flex-col items-center justify-center h-full min-h-[300px] gap-4"
-          style={{ borderColor: 'var(--glass-border)' }}
+          style={{ borderColor: 'var(--border-high-contrast)' }}
         >
           <input 
             type="file" 
@@ -423,7 +562,7 @@ const ArticleList: React.FC<{
                 <button 
                   onClick={(e) => handlePreviewClick(e, article)}
                   className="p-2 rounded-full backdrop-blur-md transition-all"
-                  style={{ backgroundColor: 'var(--glass-bg)', color: 'var(--text-main)' }}
+                  style={{ backgroundColor: 'var(--glass-bg)', color: 'var(--text-main)', border: '1px solid var(--border-high-contrast)' }}
                   title="Preview"
                 >
                   <EyeIcon />
@@ -431,7 +570,7 @@ const ArticleList: React.FC<{
                 <button 
                   onClick={(e) => handleDeleteClick(e, article.id)}
                   className="p-2 rounded-full backdrop-blur-md hover:bg-red-900/70 transition-all"
-                  style={{ backgroundColor: 'var(--glass-bg)', color: 'var(--text-main)' }}
+                  style={{ backgroundColor: 'var(--glass-bg)', color: 'var(--text-main)', border: '1px solid var(--border-high-contrast)' }}
                   title="Delete"
                 >
                   <TrashIcon />
@@ -449,6 +588,15 @@ const ArticleList: React.FC<{
           </div>
         ))}
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <UploadModal 
+          onClose={() => setShowUploadModal(false)}
+          onUploadFile={() => fileInputRef.current?.click()}
+          onCreate={onCreate}
+        />
+      )}
 
       {/* Preview Modal */}
       {previewArticle && (
@@ -482,7 +630,7 @@ const PreviewModal: React.FC<{ article: Article, onClose: () => void }> = ({ art
           <button 
             onClick={onClose}
             className="transition-colors p-2 rounded-full hover:bg-[var(--surface-hover)]"
-            style={{ color: 'var(--text-secondary)' }}
+            style={{ color: 'var(--text-secondary)', border: '1px solid var(--border-high-contrast)' }}
           >
             <XMarkIcon />
           </button>
@@ -505,7 +653,7 @@ const PreviewModal: React.FC<{ article: Article, onClose: () => void }> = ({ art
            <button 
              onClick={onClose}
              className="px-4 py-2 rounded-lg text-sm transition-colors"
-             style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-main)' }}
+             style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-main)', border: '1px solid var(--border-high-contrast)' }}
            >
              Close
            </button>
@@ -523,16 +671,16 @@ const ModeSelector: React.FC<{ article: Article, onSelectMode: (m: PracticeMode)
       <div className="flex gap-8">
         <button 
           onClick={() => onSelectMode('EN_TO_ZH')}
-          className="w-64 h-40 glass-panel rounded-2xl flex flex-col items-center justify-center gap-4 transition-all duration-300 group hover:bg-[var(--surface-hover)] hover:border-[var(--glass-border)]"
-          style={{ color: 'var(--text-main)' }}
+          className="w-64 h-40 glass-panel rounded-2xl flex flex-col items-center justify-center gap-4 transition-all duration-300 group hover:bg-[var(--surface-hover)]"
+          style={{ color: 'var(--text-main)', borderColor: 'var(--border-high-contrast)' }}
         >
           <span className="text-4xl group-hover:scale-110 transition-transform duration-300">🇬🇧 &rarr; 🇨🇳</span>
           <span className="font-light tracking-wide">English to Chinese</span>
         </button>
         <button 
           onClick={() => onSelectMode('ZH_TO_EN')}
-          className="w-64 h-40 glass-panel rounded-2xl flex flex-col items-center justify-center gap-4 transition-all duration-300 group hover:bg-[var(--surface-hover)] hover:border-[var(--glass-border)]"
-          style={{ color: 'var(--text-main)' }}
+          className="w-64 h-40 glass-panel rounded-2xl flex flex-col items-center justify-center gap-4 transition-all duration-300 group hover:bg-[var(--surface-hover)]"
+          style={{ color: 'var(--text-main)', borderColor: 'var(--border-high-contrast)' }}
         >
           <span className="text-4xl group-hover:scale-110 transition-transform duration-300">🇨🇳 &rarr; 🇬🇧</span>
           <span className="font-light tracking-wide">Chinese to English</span>
@@ -853,7 +1001,7 @@ ${inputValue}
                 
                 {/* Mode Toggle */}
                 {!isSubmitted && (
-                    <div className="flex items-center bg-[var(--surface-hover)] rounded-full p-1 border border-[var(--glass-border)]">
+                    <div className="flex items-center bg-[var(--surface-hover)] rounded-full p-1 border border-[var(--border-high-contrast)]">
                         <button
                             onClick={() => setFeedbackMode('diff')}
                             className={`px-3 py-1 rounded-full text-[10px] font-bold transition-all ${feedbackMode === 'diff' ? 'bg-[var(--text-main)] text-[var(--bg-main)]' : 'text-[var(--text-secondary)]'}`}
@@ -936,14 +1084,14 @@ ${inputValue}
                       </div>
                       <button
                         onClick={handleCopyPrompt}
-                        className="px-4 py-2 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+                        className="px-4 py-2 rounded-lg text-sm font-medium border border-[var(--border-high-contrast)] hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
                       >
                           <span>Copy Prompt</span>
                       </button>
                       <button 
                         onClick={handleSubmit}
                         disabled={!inputValue.trim() || !score}
-                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
+                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check border border-[var(--border-high-contrast)]
                         ${inputValue.trim() && score ? 'active' : ''}`}
                     >
                         <span>Submit</span>
@@ -954,7 +1102,7 @@ ${inputValue}
                     <button 
                         onClick={handleSubmit}
                         disabled={!inputValue.trim()}
-                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check
+                        className={`px-6 py-2 rounded-lg text-sm flex items-center gap-2 font-medium btn-check border border-[var(--border-high-contrast)]
                         ${inputValue.trim() ? 'active' : ''}`}
                     >
                         <span>Check</span>
