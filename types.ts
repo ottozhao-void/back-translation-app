@@ -1,4 +1,4 @@
-export type FeedbackMode = 'diff' | 'llm';
+export type FeedbackMode = 'diff' | 'llm' | 'draft';
 
 export interface TranslationRecord {
   type: FeedbackMode;
