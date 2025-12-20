@@ -538,20 +538,23 @@ const App: React.FC = () => {
             if (!isTextSame) {
                 // 3. Text different -> Create new record.
                 hasChanges = true;
-                // The old record becomes history.
-                const oldRecord: TranslationRecord = {
-                    type: existingTranslation.type,
-                    text: existingTranslation.text,
-                    timestamp: existingTranslation.timestamp,
-                    score: existingTranslation.score
-                };
+                
+                let newHistory = existingTranslation.history || [];
+
+                // Only add existing translation to history if it is NOT a draft
+                if (existingTranslation.type !== 'draft') {
+                    const oldRecord: TranslationRecord = {
+                        type: existingTranslation.type,
+                        text: existingTranslation.text,
+                        timestamp: existingTranslation.timestamp,
+                        score: existingTranslation.score
+                    };
+                    newHistory = [...newHistory, oldRecord];
+                }
                 
                 finalTranslation = {
                     ...newTranslation,
-                    history: [
-                        ...(existingTranslation.history || []),
-                        oldRecord
-                    ]
+                    history: newHistory
                 };
             }
         } else {
