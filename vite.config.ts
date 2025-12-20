@@ -32,6 +32,57 @@ function setupMiddleware(middlewares: any) {
           const url = new URL(req.url || '', `http://${req.headers.host}`);
           
           // 1. Handle API requests (POST/DELETE)
+          if (url.pathname === '/api/articles/rename' && req.method === 'POST') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk: any) => chunks.push(chunk));
+            req.on('end', () => {
+              try {
+                const body = JSON.parse(Buffer.concat(chunks).toString());
+                const { oldFilename, newFilename } = body;
+                
+                if (!oldFilename || !newFilename) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: 'Missing filenames' }));
+                  return;
+                }
+
+                const safeOldFilename = path.basename(oldFilename);
+                const safeNewFilename = path.basename(newFilename);
+                
+                const oldPath = path.join(articlesDir, safeOldFilename);
+                const newPath = path.join(articlesDir, safeNewFilename);
+
+                if (!fs.existsSync(oldPath)) {
+                    res.statusCode = 404;
+                    res.end(JSON.stringify({ error: 'File not found' }));
+                    return;
+                }
+                if (fs.existsSync(newPath)) {
+                    res.statusCode = 409;
+                    res.end(JSON.stringify({ error: 'New filename already exists' }));
+                    return;
+                }
+
+                fs.renameSync(oldPath, newPath);
+
+                // Also rename in dist if it exists
+                const oldDistPath = path.join(distArticlesDir, safeOldFilename);
+                const newDistPath = path.join(distArticlesDir, safeNewFilename);
+                if (fs.existsSync(oldDistPath)) {
+                     fs.renameSync(oldDistPath, newDistPath);
+                }
+
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, newFilename: safeNewFilename }));
+              } catch (e) {
+                console.error(e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: 'Failed to rename file' }));
+              }
+            });
+            return;
+          }
+
           if (url.pathname === '/api/articles') {
              if (req.method === 'GET') {
                 const files = fs.readdirSync(articlesDir).filter(f => f.endsWith('.md') || f.endsWith('.txt') || f.endsWith('.json'));

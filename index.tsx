@@ -326,6 +326,14 @@ const App: React.FC = () => {
         }
         return a;
       }));
+
+      // 4. Update content on server (to save new title in JSON)
+      const article = articles.find(a => a.id === articleId);
+      if (article) {
+          const updatedArticle = { ...article, id: newFilename, title: newTitle };
+          const content = serializeArticle(updatedArticle);
+          await saveArticleToServer(newFilename, content);
+      }
     } else {
       alert("Failed to rename article on server.");
     }
