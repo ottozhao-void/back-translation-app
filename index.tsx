@@ -111,23 +111,30 @@ const ParticleBackground: React.FC = () => {
 };
 
 // --- Settings Component ---
-interface AutoSaveSettings {
-  enabled: boolean;
-  delay: number; // ms
+interface AppSettings {
+  autoSave: {
+    enabled: boolean;
+    delay: number; // ms
+  };
+  llmThreshold: number;
 }
 
 const SettingsModal: React.FC<{
-  settings: AutoSaveSettings;
-  onUpdate: (newSettings: AutoSaveSettings) => void;
+  settings: AppSettings;
+  onUpdate: (newSettings: AppSettings) => void;
   onClose: () => void;
 }> = ({ settings, onUpdate, onClose }) => {
-  const [enabled, setEnabled] = useState(settings.enabled);
-  const [delay, setDelay] = useState(settings.delay / 1000); // Display in seconds
+  const [autoSaveEnabled, setAutoSaveEnabled] = useState(settings.autoSave.enabled);
+  const [autoSaveDelay, setAutoSaveDelay] = useState(settings.autoSave.delay / 1000); // Display in seconds
+  const [llmThreshold, setLlmThreshold] = useState(settings.llmThreshold);
 
   const handleSave = () => {
     onUpdate({
-      enabled,
-      delay: delay * 1000
+      autoSave: {
+        enabled: autoSaveEnabled,
+        delay: autoSaveDelay * 1000
+      },
+      llmThreshold
     });
     onClose();
   };
@@ -146,17 +153,18 @@ const SettingsModal: React.FC<{
         </div>
 
         <div className="space-y-6">
+          {/* Auto Save Settings */}
           <div className="flex items-center justify-between">
             <span style={{ color: 'var(--text-main)' }}>Auto Save Drafts</span>
             <button 
-              onClick={() => setEnabled(!enabled)}
-              className={`w-12 h-6 rounded-full transition-colors relative ${enabled ? 'bg-emerald-500' : 'bg-gray-600'}`}
+              onClick={() => setAutoSaveEnabled(!autoSaveEnabled)}
+              className={`w-12 h-6 rounded-full transition-colors relative ${autoSaveEnabled ? 'bg-emerald-500' : 'bg-gray-600'}`}
             >
-              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'left-7' : 'left-1'}`} />
+              <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${autoSaveEnabled ? 'left-7' : 'left-1'}`} />
             </button>
           </div>
 
-          {enabled && (
+          {autoSaveEnabled && (
             <div className="flex flex-col gap-2">
               <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                 Auto-save delay (seconds)
@@ -165,13 +173,31 @@ const SettingsModal: React.FC<{
                 type="number" 
                 min="1" 
                 max="60"
-                value={delay}
-                onChange={(e) => setDelay(Math.max(1, parseInt(e.target.value) || 1))}
+                value={autoSaveDelay}
+                onChange={(e) => setAutoSaveDelay(Math.max(1, parseInt(e.target.value) || 1))}
                 className="w-full bg-[var(--surface-hover)] border border-[var(--glass-border)] rounded px-3 py-2 outline-none focus:border-[var(--text-main)] transition-colors"
                 style={{ color: 'var(--text-main)' }}
               />
             </div>
           )}
+
+          {/* LLM Threshold Settings */}
+          <div className="flex flex-col gap-2 pt-4 border-t border-[var(--glass-border)]">
+             <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                LLM Score Threshold
+              </label>
+              <div className="flex items-center gap-4">
+                <input 
+                    type="range" 
+                    min="1" 
+                    max="100" 
+                    value={llmThreshold} 
+                    onChange={(e) => setLlmThreshold(parseInt(e.target.value))}
+                    className="flex-1"
+                />
+                <span className="font-mono w-8 text-right">{llmThreshold}</span>
+              </div>
+          </div>
         </div>
 
         <div className="mt-8 flex justify-end">
@@ -202,17 +228,23 @@ const App: React.FC = () => {
 
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
-  const [autoSaveSettings, setAutoSaveSettings] = useState<AutoSaveSettings>(() => {
+  const [appSettings, setAppSettings] = useState<AppSettings>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('autoSaveSettings');
+      const saved = localStorage.getItem('appSettings');
       if (saved) return JSON.parse(saved);
+      
+      // Migration
+      const old = localStorage.getItem('autoSaveSettings');
+      if (old) {
+        return { autoSave: JSON.parse(old), llmThreshold: 85 };
+      }
     }
-    return { enabled: true, delay: 3000 };
+    return { autoSave: { enabled: true, delay: 3000 }, llmThreshold: 85 };
   });
 
-  const updateAutoSaveSettings = (newSettings: AutoSaveSettings) => {
-    setAutoSaveSettings(newSettings);
-    localStorage.setItem('autoSaveSettings', JSON.stringify(newSettings));
+  const updateAppSettings = (newSettings: AppSettings) => {
+    setAppSettings(newSettings);
+    localStorage.setItem('appSettings', JSON.stringify(newSettings));
   };
 
   // Theme State
@@ -507,15 +539,15 @@ const App: React.FC = () => {
             mode={practiceMode}
             onUpdateProgress={updateArticleProgress}
             onBack={() => setView('MODE_SELECT')}
-            autoSaveSettings={autoSaveSettings}
+            appSettings={appSettings}
           />
         )}
       </main>
 
       {showSettings && (
         <SettingsModal 
-          settings={autoSaveSettings} 
-          onUpdate={updateAutoSaveSettings} 
+          settings={appSettings} 
+          onUpdate={updateAppSettings} 
           onClose={() => setShowSettings(false)} 
         />
       )}
@@ -880,9 +912,16 @@ const PracticeSession: React.FC<{
   mode: PracticeMode;
   onUpdateProgress: (aId: string, pId: string, val: UserTranslation) => void;
   onBack: () => void;
-  autoSaveSettings: AutoSaveSettings;
-}> = ({ article, mode, onUpdateProgress, onBack, autoSaveSettings }) => {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  appSettings: AppSettings;
+}> = ({ article, mode, onUpdateProgress, onBack, appSettings }) => {
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    // Auto-jump to first unfinished
+    const idx = article.content.findIndex(p => {
+        const t = mode === 'EN_TO_ZH' ? p.userTranslationZh : p.userTranslationEn;
+        return !t || t.type === 'draft';
+    });
+    return idx !== -1 ? idx : 0;
+  });
   const [inputValue, setInputValue] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [showHint, setShowHint] = useState(false);
@@ -956,7 +995,7 @@ const PracticeSession: React.FC<{
 
   // Auto-save logic
   useEffect(() => {
-    if (isSubmitted || !autoSaveSettings.enabled) return;
+    if (isSubmitted || !appSettings.autoSave.enabled) return;
 
     if (inputValue !== lastSavedText.current) {
       setSaveStatus('unsaved');
@@ -965,7 +1004,7 @@ const PracticeSession: React.FC<{
 
       autoSaveTimerRef.current = setTimeout(() => {
         handleAutoSave();
-      }, autoSaveSettings.delay);
+      }, appSettings.autoSave.delay);
     } else {
         setSaveStatus('saved');
     }
@@ -973,7 +1012,7 @@ const PracticeSession: React.FC<{
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [inputValue, isSubmitted, autoSaveSettings]);
+  }, [inputValue, isSubmitted, appSettings.autoSave]);
 
   // Focus container when submitting to ensure shortcuts work
   useEffect(() => {
@@ -1029,20 +1068,20 @@ const PracticeSession: React.FC<{
       const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh : currentParagraph.en;
       
       const prompt = `
-# Original Text
+      # Original Text
 
-${sourceText}
+      ${sourceText}
 
-# Original Translation
+      # Original Translation
 
-${targetText}
+      ${targetText}
 
-Please evalutate my translation below and provide detailed feedback and a score on a scale of 1 to 100
+      Please evalutate my translation below and provide detailed feedback and a score on a scale of 1 to 100
 
-# My Translation
+      # My Translation
 
-${inputValue}
-`;
+      ${inputValue}
+      `;
       navigator.clipboard.writeText(prompt).then(() => {
           alert("Prompt copied to clipboard!");
       });
@@ -1139,10 +1178,26 @@ ${inputValue}
       <div className="absolute -top-2 left-0 right-0 flex justify-center z-30">
         <div className="flex gap-2 overflow-x-auto max-w-[80vw] px-4 py-2 custom-scrollbar">
           {article.content.map((p, idx) => {
-            const isCompleted = mode === 'EN_TO_ZH' 
-              ? !!p.userTranslationZh 
-              : !!p.userTranslationEn;
+            const translation = mode === 'EN_TO_ZH' ? p.userTranslationZh : p.userTranslationEn;
             const isCurrent = idx === currentIndex;
+            
+            // Default (Not Started) & Draft: High contrast border/text, transparent bg
+            let statusClass = 'bg-transparent text-[var(--text-main)] border-[var(--text-main)] border-2 font-bold';
+
+            if (translation) {
+                if (translation.type === 'diff') {
+                    // Diff: Yellow bg
+                    statusClass = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30';
+                } else if (translation.type === 'llm') {
+                    // LLM: Check threshold
+                    const score = translation.score || 0;
+                    if (score >= appSettings.llmThreshold) {
+                         statusClass = 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30';
+                    } else {
+                         statusClass = 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/30';
+                    }
+                }
+            }
             
             return (
               <button
@@ -1153,9 +1208,7 @@ ${inputValue}
                 }}
                 className={`
                   flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-xs font-mono transition-all duration-300 border
-                  ${isCompleted 
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30' 
-                    : 'bg-transparent text-[var(--text-secondary)] border-[var(--glass-border)] hover:bg-[var(--surface-hover)]'}
+                  ${statusClass}
                   ${isCurrent ? 'ring-2 ring-[var(--text-main)] scale-110 z-10 bg-[var(--surface-active)]' : ''}
                 `}
               >
@@ -1310,7 +1363,7 @@ ${inputValue}
                       <div className="flex-1">
                           <div className="flex justify-between">
                             <label className="text-[10px] uppercase tracking-widest mb-1 block opacity-70">Score (1-100)</label>
-                             {autoSaveSettings.enabled && (
+                             {appSettings.autoSave.enabled && (
                                 <span className="text-[10px] font-mono opacity-50" style={{ color: 'var(--text-secondary)' }}>
                                     {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Saved'}
                                 </span>
@@ -1344,7 +1397,7 @@ ${inputValue}
               ) : (
                 <div className="flex justify-between w-full items-center">
                     <div className="text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>
-                        {autoSaveSettings.enabled && (
+                        {appSettings.autoSave.enabled && (
                             <span className={`transition-opacity duration-300 ${saveStatus === 'saved' ? 'opacity-50' : 'opacity-100'}`}>
                                 {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'unsaved' ? 'Unsaved' : 'Saved'}
                             </span>
