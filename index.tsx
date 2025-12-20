@@ -1024,6 +1024,19 @@ const ModeSelector: React.FC<{ article: Article, onSelectMode: (m: PracticeMode)
   );
 };
 
+// --- Toast Component ---
+const Toast: React.FC<{ message: string | null }> = ({ message }) => {
+  if (!message) return null;
+  return (
+    <div className="absolute top-8 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300 fade-in">
+      <div className="glass-panel px-6 py-3 rounded-full shadow-lg flex items-center gap-2" style={{ backgroundColor: 'var(--surface-active)', borderColor: 'var(--border-high-contrast)' }}>
+        <CheckIcon />
+        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{message}</span>
+      </div>
+    </div>
+  );
+};
+
 // --- View: Practice Session (The Core) ---
 const PracticeSession: React.FC<{
   article: Article;
@@ -1048,6 +1061,7 @@ const PracticeSession: React.FC<{
   const [feedbackMode, setFeedbackMode] = useState<FeedbackMode>('diff');
   const [score, setScore] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const currentParagraph = article.content[currentIndex];
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1201,7 +1215,8 @@ const PracticeSession: React.FC<{
       ${inputValue}
       `;
       navigator.clipboard.writeText(prompt).then(() => {
-          alert("Prompt copied to clipboard!");
+          setToastMessage("Prompt copied to clipboard!");
+          setTimeout(() => setToastMessage(null), 1000);
       });
   };
 
@@ -1291,6 +1306,7 @@ const PracticeSession: React.FC<{
       tabIndex={0}
       ref={containerRef}
     >
+      <Toast message={toastMessage} />
 
       {/* Paragraph Selector */}
       <div className="absolute -top-2 left-0 right-0 flex justify-center z-30">

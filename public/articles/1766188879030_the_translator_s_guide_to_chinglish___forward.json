@@ -86,11 +86,11 @@
       "id": "article-1.md_p5",
       "en": "When an example of Chinglish is taken from a draft translation, the revision offered here (the \"B-version\") is, with few exceptions, the one decided upon by the polishers who revised it. If, however, the A-version appeared in print, the revision is one that I think should have been made and that I am suggesting now. In either case, the proposed B-version is not necessarily the only \"correct\" one. Translation is not a science but a craft, and craftsmen in any field may have different opinions as to the best solution to a given technical problem.",
       "zh": "书中凡是为从初译稿里引用的例句提供的修改译文 (B version), 除个别例外，都是由改稿人定的。但是，如果 A-version 是从已出版的书中引用的，那么所提供的修改译文则是我认为当初应该改而未改、现在建议这样改的。无论是哪一种情况，这里所提供的修改译文不一定是惟一\"正确\"的。翻译不是一门科学，而是一种需要特殊技能的专业。每个行业的技术工人对于解决某个技术问题的最佳办法都会有不同的见解。",
-      "lastPracticed": 1766272089273,
+      "lastPracticed": 1766274377956,
       "userTranslationZh": {
-        "type": "draft",
-        "text": "当",
-        "timestamp": 1766272089273,
+        "type": "llm",
+        "text": "对于某个取自初译稿的中式英语例句，除了极少数情况，本书提供的改进意见（也就是B版本）来自于审核该例句的润色者。但是，如果 A 版本出现在发表刊物中，我就会给出我认为应该做出的改进。不论是哪种情况，所提供的B版本都不一定是唯一正确的版本。相比于科学，翻译更像是一门手艺，任何领域的手艺人都有着其就某一技术问题最佳方案的独特观点。",
+        "timestamp": 1766274011468,
         "history": [
           {
             "type": "draft",
@@ -112,7 +112,8 @@
             "text": "123",
             "timestamp": 1766188646391
           }
-        ]
+        ],
+        "score": 88
       }
     },
     {
