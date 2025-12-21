@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Article, PracticeMode, DiffPart, DiffType, Paragraph, UserTranslation, FeedbackMode, TranslationRecord } from './types';
+import { Article, PracticeMode, Paragraph, UserTranslation, FeedbackMode, TranslationRecord } from './types';
 import { playTextToSpeech } from './services/geminiService';
-import { computeDiff } from './utils/diffUtils';
 import { fetchArticles, parseArticle, parseMarkdownArticle, saveArticleToServer, deleteArticleFromServer, renameArticleOnServer, serializeArticle } from './utils/articleLoader';
+import { SentenceCompareModal } from './components/SentenceCompareModal';
 
 // --- Constants for Persistence ---
 const STORAGE_KEYS = {
@@ -486,6 +486,38 @@ const App: React.FC = () => {
     }
   };
 
+  const addReferenceTranslation = async (articleId: string, paragraphId: string, text: string, targetLang: 'en' | 'zh') => {
+    const articleIndex = articles.findIndex(a => a.id === articleId);
+    if (articleIndex === -1) return;
+    
+    const article = articles[articleIndex];
+    let updatedArticle: Article = { ...article };
+
+    updatedArticle.content = article.content.map(p => {
+        if (p.id !== paragraphId) return p;
+        if (targetLang === 'zh') {
+            return { ...p, zh: [...p.zh, text] };
+        } else {
+            return { ...p, en: [...p.en, text] };
+        }
+    });
+
+    setArticles(prev => {
+        const newArr = [...prev];
+        newArr[articleIndex] = updatedArticle;
+        return newArr;
+    });
+
+    const fileContent = serializeArticle(updatedArticle);
+    let filename = articleId;
+    if (filename.endsWith('.md')) {
+        filename = filename.replace(/\.md$/, '.json');
+    } else if (!filename.endsWith('.json')) {
+        filename += '.json';
+    }
+    await saveArticleToServer(filename, fileContent);
+  };
+
   const startPractice = (mode: PracticeMode) => {
     setPracticeMode(mode);
     setView('PRACTICE');
@@ -656,6 +688,7 @@ const App: React.FC = () => {
             article={articles.find(a => a.id === selectedArticle.id)!}
             mode={practiceMode}
             onUpdateProgress={updateArticleProgress}
+            onAddReference={addReferenceTranslation}
             onBack={() => setView('MODE_SELECT')}
             appSettings={appSettings}
           />
@@ -971,10 +1004,10 @@ const PreviewModal: React.FC<{ article: Article, onClose: () => void }> = ({ art
           {article.content.map((p, i) => (
             <div key={p.id} className="flex flex-col md:flex-row gap-4 md:gap-8">
               <div className="flex-1">
-                <p className="font-serif-sc leading-relaxed" style={{ color: 'var(--text-main)' }}>{p.en}</p>
+                <p className="font-serif-sc leading-relaxed" style={{ color: 'var(--text-main)' }}>{p.en[0]}</p>
               </div>
               <div className="flex-1">
-                 <p className="font-serif-sc leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{p.zh}</p>
+                 <p className="font-serif-sc leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{p.zh[0]}</p>
               </div>
             </div>
           ))}
@@ -1042,9 +1075,10 @@ const PracticeSession: React.FC<{
   article: Article;
   mode: PracticeMode;
   onUpdateProgress: (aId: string, pId: string, val: UserTranslation) => void;
+  onAddReference: (aId: string, pId: string, text: string, targetLang: 'en' | 'zh') => void;
   onBack: () => void;
   appSettings: AppSettings;
-}> = ({ article, mode, onUpdateProgress, onBack, appSettings }) => {
+}> = ({ article, mode, onUpdateProgress, onAddReference, onBack, appSettings }) => {
   const [currentIndex, setCurrentIndex] = useState(() => {
     // Auto-jump to first unfinished
     const idx = article.content.findIndex(p => {
@@ -1062,6 +1096,7 @@ const PracticeSession: React.FC<{
   const [score, setScore] = useState<string>('');
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showCompareModal, setShowCompareModal] = useState(false);
 
   const currentParagraph = article.content[currentIndex];
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1099,6 +1134,7 @@ const PracticeSession: React.FC<{
       setSaveStatus('saved');
     }
     setShowHint(false);
+    setShowCompareModal(false);
 
     // Focus management on card change
     setTimeout(() => {
@@ -1187,17 +1223,24 @@ const PracticeSession: React.FC<{
     }
 
     setIsSubmitted(true);
-    onUpdateProgress(article.id, currentParagraph.id, {
-        type: feedbackMode,
-        text: inputValue,
-        timestamp: Date.now(),
-        score: finalScore
-    });
+    
+    // Only save if LLM mode. Diff mode doesn't save per requirement 1.
+    if (feedbackMode === 'llm') {
+        onUpdateProgress(article.id, currentParagraph.id, {
+            type: feedbackMode,
+            text: inputValue,
+            timestamp: Date.now(),
+            score: finalScore
+        });
+    } else {
+        // Diff mode: Show modal
+        setShowCompareModal(true);
+    }
   };
 
   const handleCopyPrompt = () => {
-      const sourceText = mode === 'EN_TO_ZH' ? currentParagraph.en : currentParagraph.zh;
-      const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh : currentParagraph.en;
+      const sourceText = mode === 'EN_TO_ZH' ? currentParagraph.en[0] : currentParagraph.zh[0];
+      const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh[0] : currentParagraph.en[0];
       
       const prompt = `
       # Original Text
@@ -1288,16 +1331,10 @@ const PracticeSession: React.FC<{
   };
 
   // Determine source and target text based on mode
-  const sourceText = mode === 'EN_TO_ZH' ? currentParagraph.en : currentParagraph.zh;
-  const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh : currentParagraph.en;
+  const sourceText = mode === 'EN_TO_ZH' ? currentParagraph.en[0] : currentParagraph.zh[0];
+  const targetText = mode === 'EN_TO_ZH' ? currentParagraph.zh[0] : currentParagraph.en[0];
   
-  // For Diff
-  const diffs = useMemo(() => {
-    if (!isSubmitted || feedbackMode !== 'diff') return [];
-    // If EN_TO_ZH, user types Chinese (use char diff). If ZH_TO_EN, user types English (use word diff).
-    const diffMode = mode === 'EN_TO_ZH' ? 'char' : 'word';
-    return computeDiff(targetText, inputValue, diffMode);
-  }, [isSubmitted, inputValue, targetText, mode, feedbackMode]);
+
 
   return (
     <div 
@@ -1307,6 +1344,17 @@ const PracticeSession: React.FC<{
       ref={containerRef}
     >
       <Toast message={toastMessage} />
+
+      {showCompareModal && (
+        <SentenceCompareModal 
+          sourceText={sourceText}
+          referenceText={targetText}
+          userText={inputValue}
+          additionalReferences={mode === 'EN_TO_ZH' ? currentParagraph.zh.slice(1) : currentParagraph.en.slice(1)}
+          onClose={() => setShowCompareModal(false)}
+          onAddReference={(text) => onAddReference(article.id, currentParagraph.id, text, mode === 'EN_TO_ZH' ? 'zh' : 'en')}
+        />
+      )}
 
       {/* Paragraph Selector */}
       <div className="absolute -top-2 left-0 right-0 flex justify-center z-30">
@@ -1469,11 +1517,7 @@ const PracticeSession: React.FC<{
             ) : (
               <div className="text-xl leading-relaxed font-serif-sc overflow-y-auto flex-1 pr-2 custom-scrollbar break-words whitespace-pre-wrap">
                 {feedbackMode === 'diff' ? (
-                    diffs.map((part, i) => (
-                    <span key={i} className={getDiffStyle(part.type)}>
-                        {part.value}
-                    </span>
-                    ))
+                    <span style={{ color: 'var(--text-main)' }}>{inputValue}</span>
                 ) : (
                     <div className="flex flex-col gap-4">
                         <div className="p-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-hover)]">
@@ -1550,18 +1594,7 @@ const PracticeSession: React.FC<{
               )}
             </div>
           )}
-          {isSubmitted && feedbackMode === 'diff' && (
-             <div className="mt-4 flex justify-between items-center border-t pt-4" style={{ borderColor: 'var(--glass-border)' }}>
-                <div className="flex gap-3 text-xs items-center" style={{ color: 'var(--text-secondary)' }}>
-                  <span>Results</span>
-                </div>
-                <div className="flex gap-4">
-                  <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}><span className="w-2 h-2 rounded-full bg-emerald-500/50"></span> Good</div>
-                  <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}><span className="w-2 h-2 rounded-full bg-yellow-500/50"></span> Missing</div>
-                  <div className="flex items-center gap-1 text-xs" style={{ color: 'var(--text-secondary)' }}><span className="w-2 h-2 rounded-full bg-red-500/50 line-through decoration-red-500/50"></span> Extra</div>
-                </div>
-             </div>
-          )}
+
         </div>
 
       </div>
@@ -1575,19 +1608,7 @@ const PracticeSession: React.FC<{
   );
 };
 
-// --- Aesthetic Helper ---
-function getDiffStyle(type: DiffType): string {
-  switch (type) {
-    case DiffType.MATCH:
-      return "diff-match";
-    case DiffType.DELETE:
-      return "diff-delete";
-    case DiffType.INSERT:
-      return "diff-insert";
-    default:
-      return "";
-  }
-}
+
 
 // --- Mount ---
 const root = createRoot(document.getElementById('root')!);

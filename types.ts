@@ -13,11 +13,12 @@ export interface UserTranslation extends TranslationRecord {
 
 export interface Paragraph {
   id: string;
-  en: string; // English content
-  zh: string; // Chinese content
+  en: string[]; // English content (list of translations/versions)
+  zh: string[]; // Chinese content (list of translations/versions)
   userTranslationZh?: UserTranslation; // User's Chinese translation (for EN_TO_ZH)
   userTranslationEn?: UserTranslation; // User's English translation (for ZH_TO_EN)
   lastPracticed?: number; // Timestamp
+  referenceTranslations?: string[]; // Additional reference translations
 }
 
 export interface Article {
@@ -31,14 +32,4 @@ export interface Article {
 
 export type PracticeMode = 'EN_TO_ZH' | 'ZH_TO_EN';
 
-export enum DiffType {
-  MATCH = 'MATCH',
-  INSERT = 'INSERT',
-  DELETE = 'DELETE',
-  SUBSTITUTE = 'SUBSTITUTE'
-}
 
-export interface DiffPart {
-  type: DiffType;
-  value: string;
-}

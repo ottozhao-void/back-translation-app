@@ -9,7 +9,13 @@ export const parseArticle = (text: string, id: string): Article | null => {
   try {
     const json = JSON.parse(text);
     if (json.content && Array.isArray(json.content)) {
-      return { ...json, id };
+      // Ensure en and zh are arrays (Migration)
+      const content = json.content.map((p: any) => ({
+        ...p,
+        en: Array.isArray(p.en) ? p.en : [p.en],
+        zh: Array.isArray(p.zh) ? p.zh : [p.zh]
+      }));
+      return { ...json, content, id };
     }
   } catch (e) {
     // Ignore
@@ -104,8 +110,8 @@ export const parseMarkdownArticle = (text: string, id: string): Article => {
 
     content.push({
       id: `${id}_p${i}`,
-      en: enParagraphs[i] || "",
-      zh: zhParagraphs[i] || "",
+      en: [enParagraphs[i] || ""],
+      zh: [zhParagraphs[i] || ""],
       userTranslationZh,
       userTranslationEn,
     });
