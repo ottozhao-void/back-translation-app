@@ -117,9 +117,27 @@ interface AppSettings {
     delay: number; // ms
   };
   llmThreshold: number;
+  hotkeys: { [commandId: string]: string };
 }
 
+const AVAILABLE_COMMANDS = [
+  { id: 'next', label: 'Next Sentence', default: 'ArrowRight' },
+  { id: 'prev', label: 'Previous Sentence', default: 'ArrowLeft' },
+  { id: 'hint', label: 'Toggle Hint', default: 'Tab' },
+  { id: 'submit', label: 'Submit / Check', default: 'Enter' },
+  { id: 'edit', label: 'Edit Translation', default: 'E' },
+  { id: 'compare', label: 'Open Compare Modal', default: 'C' },
+  { id: 'playAudio', label: 'Play Audio', default: 'Alt+P' },
+  { id: 'autoSave', label: 'Trigger Auto Save', default: 'Ctrl+S' },
+];
+
 // --- Settings Icons ---
+const KeyboardIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25H12" />
+  </svg>
+);
+
 const SystemIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
@@ -151,6 +169,12 @@ const DataIcon = () => (
   </svg>
 );
 
+const ArrowUturnLeftIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+  </svg>
+);
+
 const LockClosedIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -178,6 +202,8 @@ const SettingsModal: React.FC<{
   const [autoSaveEnabled, setAutoSaveEnabled] = useState(settings.autoSave.enabled);
   const [autoSaveDelay, setAutoSaveDelay] = useState(settings.autoSave.delay / 1000);
   const [llmThreshold, setLlmThreshold] = useState(settings.llmThreshold);
+  const [hotkeys, setHotkeys] = useState(settings.hotkeys || {});
+  const [recordingCommandId, setRecordingCommandId] = useState<string | null>(null);
 
   const handleSave = () => {
     onUpdate({
@@ -185,13 +211,62 @@ const SettingsModal: React.FC<{
         enabled: autoSaveEnabled,
         delay: autoSaveDelay * 1000
       },
-      llmThreshold
+      llmThreshold,
+      hotkeys
     });
     onClose();
   };
 
+  const handleHotkeyRecord = (e: React.KeyboardEvent, commandId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const parts = [];
+      if (e.ctrlKey) parts.push('Ctrl');
+      if (e.metaKey) parts.push('Meta');
+      if (e.altKey) parts.push('Alt');
+      if (e.shiftKey) parts.push('Shift');
+
+      const key = e.key;
+      if (['Control', 'Meta', 'Alt', 'Shift'].includes(key)) return; // Just modifiers
+
+      if (key === ' ') parts.push('Space');
+      else if (key === 'ArrowUp') parts.push('ArrowUp');
+      else if (key === 'ArrowDown') parts.push('ArrowDown');
+      else if (key === 'ArrowLeft') parts.push('ArrowLeft');
+      else if (key === 'ArrowRight') parts.push('ArrowRight');
+      else if (key === 'Enter') parts.push('Enter');
+      else if (key === 'Tab') parts.push('Tab');
+      else if (key === 'Escape') {
+          setRecordingCommandId(null);
+          return;
+      }
+      else if (key === 'Backspace' || key === 'Delete') {
+          // Clear hotkey (Unbind)
+          setHotkeys({ ...hotkeys, [commandId]: '' });
+          setRecordingCommandId(null);
+          return;
+      }
+      else parts.push(key.toUpperCase());
+
+      const hotkeyString = parts.join('+');
+      setHotkeys({ ...hotkeys, [commandId]: hotkeyString });
+      setRecordingCommandId(null);
+  };
+
+  const handleResetHotkey = (commandId: string) => {
+      const newHotkeys = { ...hotkeys };
+      delete newHotkeys[commandId];
+      setHotkeys(newHotkeys);
+  };
+
+  const handleClearHotkey = (commandId: string) => {
+      setHotkeys({ ...hotkeys, [commandId]: '' });
+  };
+
   const sidebarItems = [
     { name: 'General', icon: SystemIcon },
+    { name: 'Hotkeys', icon: KeyboardIcon },
   ];
 
   return (
@@ -293,7 +368,70 @@ const SettingsModal: React.FC<{
                 </div>
               )}
 
-              {activeTab !== 'General' && (
+              {activeTab === 'Hotkeys' && (
+                  <div className="space-y-4 max-w-3xl">
+                      <div className="flex items-center gap-2 p-2 mb-4 border-b border-[var(--glass-border)]">
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-[var(--text-secondary)]">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                          </svg>
+                          <input 
+                              type="text" 
+                              placeholder="Search hotkeys..." 
+                              className="bg-transparent outline-none w-full text-sm"
+                              style={{ color: 'var(--text-main)' }}
+                          />
+                      </div>
+
+                      {AVAILABLE_COMMANDS.map(cmd => {
+                          const isRecording = recordingCommandId === cmd.id;
+                          const customKey = hotkeys[cmd.id];
+                          const currentKey = customKey !== undefined ? customKey : cmd.default;
+                          const isCustomized = customKey !== undefined;
+                          
+                          return (
+                              <div key={cmd.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-[var(--surface-hover)]/50 transition-colors group">
+                                  <div className="flex flex-col">
+                                      <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>{cmd.label}</span>
+                                      <span className="text-xs opacity-50" style={{ color: 'var(--text-secondary)' }}>{cmd.id}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      {isCustomized && (
+                                          <button
+                                              onClick={() => handleResetHotkey(cmd.id)}
+                                              className="p-1.5 rounded-md text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--text-main)] transition-colors opacity-0 group-hover:opacity-100"
+                                              title="Restore Default"
+                                          >
+                                              <ArrowUturnLeftIcon />
+                                          </button>
+                                      )}
+                                      <button
+                                          onClick={() => handleClearHotkey(cmd.id)}
+                                          className="p-1.5 rounded-md text-[var(--text-secondary)] hover:bg-red-500/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                                          title="Unbind (Clear)"
+                                      >
+                                          <XMarkIcon />
+                                      </button>
+                                      <button
+                                          onClick={() => setRecordingCommandId(cmd.id)}
+                                          onKeyDown={(e) => isRecording && handleHotkeyRecord(e, cmd.id)}
+                                          className={`
+                                              min-w-[100px] px-3 py-1.5 rounded-md text-xs font-mono border transition-all
+                                              ${isRecording 
+                                                  ? 'bg-[var(--surface-active)] border-[var(--text-main)] text-[var(--text-main)] animate-pulse' 
+                                                  : 'bg-[var(--surface-hover)] border-transparent text-[var(--text-secondary)] hover:border-[var(--border-high-contrast)]'
+                                              }
+                                          `}
+                                      >
+                                          {isRecording ? 'Press keys...' : (currentKey || 'None')}
+                                      </button>
+                                  </div>
+                              </div>
+                          );
+                      })}
+                  </div>
+              )}
+
+              {activeTab !== 'General' && activeTab !== 'Hotkeys' && (
                 <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)]">
                    <div className="mb-4 opacity-50 scale-150">
                       {(() => {
@@ -351,10 +489,10 @@ const App: React.FC = () => {
       // Migration
       const old = localStorage.getItem('autoSaveSettings');
       if (old) {
-        return { autoSave: JSON.parse(old), llmThreshold: 85 };
+        return { autoSave: JSON.parse(old), llmThreshold: 85, hotkeys: {} };
       }
     }
-    return { autoSave: { enabled: true, delay: 3000 }, llmThreshold: 85 };
+    return { autoSave: { enabled: true, delay: 3000 }, llmThreshold: 85, hotkeys: {} };
   });
 
   const updateAppSettings = (newSettings: AppSettings) => {
@@ -1070,6 +1208,30 @@ const Toast: React.FC<{ message: string | null }> = ({ message }) => {
   );
 };
 
+// --- Helper: Hotkey Matcher ---
+const matchesHotkey = (e: React.KeyboardEvent, hotkeyDef: string) => {
+  if (!hotkeyDef) return false;
+  const parts = hotkeyDef.split('+');
+  const modifiers = {
+      ctrl: parts.includes('Ctrl'),
+      alt: parts.includes('Alt'),
+      meta: parts.includes('Meta'),
+      shift: parts.includes('Shift')
+  };
+  
+  if (e.ctrlKey !== modifiers.ctrl) return false;
+  if (e.altKey !== modifiers.alt) return false;
+  if (e.metaKey !== modifiers.meta) return false;
+  if (e.shiftKey !== modifiers.shift) return false;
+
+  const keyPart = parts.find(p => !['Ctrl', 'Alt', 'Meta', 'Shift'].includes(p));
+  if (!keyPart) return false;
+
+  if (keyPart === 'Space') return e.key === ' ';
+  if (keyPart.length === 1) return e.key.toUpperCase() === keyPart.toUpperCase();
+  return e.key === keyPart;
+};
+
 // --- View: Practice Session (The Core) ---
 const PracticeSession: React.FC<{
   article: Article;
@@ -1266,30 +1428,45 @@ const PracticeSession: React.FC<{
   const handleKeyDown = (e: React.KeyboardEvent) => {
     const isInput = (e.target as HTMLElement).tagName === 'TEXTAREA' || (e.target as HTMLElement).tagName === 'INPUT';
 
-    // Ctrl+S for Save
-    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    const getHotkey = (id: string) => appSettings.hotkeys[id] || AVAILABLE_COMMANDS.find(c => c.id === id)?.default || '';
+    const checkCmd = (id: string) => matchesHotkey(e, getHotkey(id));
+
+    // Auto Save
+    if (checkCmd('autoSave')) {
       e.preventDefault();
       handleAutoSave();
       return;
     }
 
-    // Global: E for Edit (only when submitted)
-    if (isSubmitted && (e.key === 'e' || e.key === 'E')) {
+    // Edit Translation
+    if (isSubmitted && checkCmd('edit')) {
       e.preventDefault();
       setIsSubmitted(false);
       setTimeout(() => inputRef.current?.focus(), 10);
       return;
     }
 
+    // Open Compare Modal
+    if (checkCmd('compare')) {
+      const hasModifier = e.ctrlKey || e.altKey || e.metaKey;
+      // If in input, no modifier, and simple key -> treat as typing, ignore command
+      if (isInput && !hasModifier && e.key.length === 1) {
+         // pass
+      } else {
+         e.preventDefault();
+         setShowCompareModal(true);
+         return;
+      }
+    }
+
     // Navigation (Arrows)
-    // Allowed if: 1. Submitted (no text editing) OR 2. Not in input (unlikely but safe)
-    if (e.key === 'ArrowRight') {
+    if (checkCmd('next')) {
       if (!isInput || isSubmitted) {
         e.preventDefault();
         handleNext();
         return;
       }
-    } else if (e.key === 'ArrowLeft') {
+    } else if (checkCmd('prev')) {
       if (!isInput || isSubmitted) {
         e.preventDefault();
         handlePrev();
@@ -1298,24 +1475,16 @@ const PracticeSession: React.FC<{
     }
 
     // Submit / Action
-    if (e.key === 'Enter' && !e.shiftKey) {
-      // In LLM mode, Enter in textarea shouldn't submit immediately if we want them to copy prompt first?
-      // But usually Enter submits.
-      // If in score input, Enter should submit.
+    if (checkCmd('submit')) {
       if (!isSubmitted) {
-         // If LLM mode, maybe don't submit on Enter in textarea?
-         // Let's keep it consistent: Ctrl+Enter or just Enter if not multiline?
-         // Textarea usually needs Enter for newlines.
-         // But here we preventDefault.
-         // Let's say Ctrl+Enter for submit in textarea, or just button.
-         // The original code used Enter for submit.
+         // Special handling for LLM mode in Textarea
          if (feedbackMode === 'llm' && (e.target as HTMLElement).tagName === 'TEXTAREA') {
-             // Allow newlines in LLM mode? Or just submit?
-             // Let's allow newlines and require button or Ctrl+Enter
-             if (e.ctrlKey || e.metaKey) {
-                 handleSubmit();
+             // If the hotkey is just 'Enter' (no modifiers), we want to allow newlines and NOT submit.
+             // But if the hotkey is 'Ctrl+Enter', we want to submit.
+             // We check if the key is 'Enter' and no modifiers are pressed.
+             if (e.key === 'Enter' && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey) {
+                 return; // Allow newline
              }
-             return; // Don't prevent default Enter
          }
          
          e.preventDefault();
@@ -1324,7 +1493,7 @@ const PracticeSession: React.FC<{
     } 
     
     // Hint
-    else if (e.key === 'Tab') {
+    else if (checkCmd('hint')) {
       e.preventDefault();
       setShowHint(prev => !prev);
     }
