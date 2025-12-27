@@ -1413,7 +1413,7 @@ const PracticeSession: React.FC<{
 
       ${targetText}
 
-      Please evalutate my translation below and provide detailed feedback and a score on a scale of 1 to 100
+      Please evaluate my translation below and provide detailed feedback and a score on a scale of 1 to 100. Offer some translation tips at the end.
 
       # My Translation
 

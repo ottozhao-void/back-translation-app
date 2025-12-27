@@ -11,8 +11,17 @@
         "The essence of learning is tranquility. Learning is not a race but a journey, one that requires patience. At its core, learning is not about excitement. It's not about mustering overwhelming energy or forcing oneself into action. Instead, it's about steady, deliberate progress."
       ],
       "zh": [
-        "学习的本质是平静。学习不是一场赛跑，而是一段需要耐心的旅程。学习的核心不是兴奋。它并非关于积聚压倒性的能量或强迫自己行动。相反，它关乎稳定、深思熟虑的进步。"
-      ]
+        "学习的本质是平静。学习不是一场赛跑，而是一段需要耐心的旅程。学习的核心不是兴奋。它并非关于积聚压倒性的能量或强迫自己行动。相反，它关乎稳定、深思熟虑的进步。",
+        "学习的本质是平静。学习不是一场赛跑，而是一段需要耐心的旅程。 核心在于，学习无关乎兴奋。 它不需要积聚压倒性的能量，也不需要强迫自己行动。 相反，它关乎稳健、深思熟虑的进步。"
+      ],
+      "lastPracticed": 1766877298717,
+      "userTranslationZh": {
+        "type": "llm",
+        "text": "学习的本质是平静。学习不是一场竞争，而是一段需要耐心才能走完的旅程。最重要的，学习不是为了能够兴奋。不是一个需要聚集庞大能量或者强制自己行动的过程。正相反，学习应该是一个平稳且从容不迫进步的过程。",
+        "timestamp": 1766876515989,
+        "history": [],
+        "score": 82
+      }
     },
     {
       "id": "1766636093980_the_essence_of_learning_is_tranquilit.json_p1",

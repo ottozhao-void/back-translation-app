@@ -8,7 +8,8 @@
     {
       "id": "article-1.md_p0",
       "en": [
-        "This book can be used either in the classroom or for independent study. It is addressed primarily to Chinese translators and to advanced students of English who are practicing translation. I hope, however, that it will prove equally useful to other Chinese who are called upon to write English and who wish to improve their mastery of it -people working in journalism, foreign affairs, business, tourism, advertising, and many other fields."
+        "This book can be used either in the classroom or for independent study. It is addressed primarily to Chinese translators and to advanced students of English who are practicing translation. I hope, however, that it will prove equally useful to other Chinese who are called upon to write English and who wish to improve their mastery of it -people working in journalism, foreign affairs, business, tourism, advertising, and many other fields.",
+        "This book can be used for teaching or self-learning. Its main audience is Chinese translators and senior students of English practicing translation. I hope, however, this guide can be helpful to other Chinese who need to write in English**—including journalists, foreign affairs personnel, and people involved in** business, tourism, advertising, and other lines of work that need English writing—and who wish to better master English."
       ],
       "zh": [
         "本书可用于课堂教学，也可用于自学。其主要对象是中国的翻译工作者以及做翻译练习的高年级英语学生。但是，我希望这本书对需要用英语写作的其他中国人 (包括新闻工作者、外事工作者、从事商业、旅游业、广告业以及许多其他行业需要使用英语的工作者) 同样有帮助，而他们又都希望解够更好地掌握英语。"
@@ -19,10 +20,19 @@
         "timestamp": 1765897861899
       },
       "userTranslationEn": {
-        "type": "diff",
-        "text": "Naturally, readers who open this book will have reached varying levels of skill in their second language. But to one degree or another, the work of all but the most highly trained and experienced among them will inevitably contain elements of Chinglish. Chinglish, of course, is that misshapen, hybrid language that s neither English nor Chinese but that might be described as\" English with Chinese characteristics.\"",
-        "timestamp": 1765897861899
-      }
+        "type": "llm",
+        "text": "This book can be used for teaching or self-learning. Its main audience is Chinese translatiors and senior student of English practicing translation. I hope, however, this guide can be helpful to other Chinese who need to write in English, those include, journalism, affair worker,  people who are involved in business, tourism, advertisment and other lines of work that needs English writting, also who wish to better master English",
+        "timestamp": 1766878286787,
+        "history": [
+          {
+            "type": "diff",
+            "text": "Naturally, readers who open this book will have reached varying levels of skill in their second language. But to one degree or another, the work of all but the most highly trained and experienced among them will inevitably contain elements of Chinglish. Chinglish, of course, is that misshapen, hybrid language that s neither English nor Chinese but that might be described as\" English with Chinese characteristics.\"",
+            "timestamp": 1765897861899
+          }
+        ],
+        "score": 60
+      },
+      "lastPracticed": 1766878708660
     },
     {
       "id": "article-1.md_p1",
@@ -147,8 +157,17 @@
         "It may seem presumptuous for a person who knows little of the Chinese language to proffer a work of this kind. My qualifications are (from French to English) who has given much thought to problems of translation. In addition, during the 1980s and 1990s I spent eight years working as a polisher in Beijing, first at Foreign Languages Press and later at the Central Translation Bureau (Bureau for the Compilation and Translation of Works of Marx, Engels, Lenin and Stalin). During those years I had the opportunity to work closely with a wide range of Chinese translators, from beginners fresh out of school to the most capable senior professors. I learned much from them all."
       ],
       "zh": [
-        "对于一个不懂汉语的人来说，向读者提供这样一部作品似乎有些不自量力。而我所具备的条件是：我一生都在学习英语而且是一名职业翻译 (法译英), 因此，对翻译问题考虑甚多。在80年代到90年代期间，我在北京做了八年的修改译文工作。先是在外文出版社，后来在中央编译局 (马恩列斯著作编译局)。在这些年里，我有机会同许多中国的翻译工作者密切合作，他们中间有刚走出校门的新手，也有水平很高的教授。我从他们那里都学到不少东西。"
-      ]
+        "对于一个不懂汉语的人来说，向读者提供这样一部作品似乎有些不自量力。而我所具备的条件是：我一生都在学习英语而且是一名职业翻译 (法译英), 因此，对翻译问题考虑甚多。在80年代到90年代期间，我在北京做了八年的修改译文工作，先是在外文出版社，后来在中央编译局 (马恩列斯著作编译局)。在这些年里，我有机会同许多中国的翻译工作者密切合作，他们中间有刚走出校门的新手，也有水平很高的教授。我从他们那里都学到不少东西。",
+        "对于一个不懂汉语的人来说，提供这样一部作品似乎有些冒昧。但我（作为一名法英翻译）的资质在于我对翻译问题的长期思考。此外，20世纪80年代至90年代，我曾在北京做了八年的改稿人，先是在外文出版社，后来在中央编译局（专门从事马克思、恩格斯、列宁和斯大林著作编译的机构）。在那些年里，我有机会与许多中国翻译工作者密切合作，从刚出校园的新手，到能力卓群的资深教授。我从他们身上学到了很多"
+      ],
+      "lastPracticed": 1766705230532,
+      "userTranslationZh": {
+        "type": "llm",
+        "text": "似乎由一位对中文知之甚少的人来写这种类型的书有点考虑欠佳了。但我的信心和资质来自我对翻译的大量思考。此外，在1980到1990期间，我曾以改稿人的身份在北京工作了8年，首先是在外研社，其次是在中央编译局（专门对马克思、恩格斯、列宁和斯大林的作品进行编译和翻译的机构）。在那些年里，我有机会和许多中国翻译者进行过密切的合作，从刚出校园的新手译者，到能力卓群的资深教授。我从他们身上学到了很多。",
+        "timestamp": 1766704576045,
+        "history": [],
+        "score": 82
+      }
     },
     {
       "id": "article-1.md_p7",
@@ -157,7 +176,15 @@
       ],
       "zh": [
         "尽管如此，如果没有两位不可多得的人一遍又一遍地帮我审阅我的手稿，这本书是不可能写出来的。首先是我的好朋友姜桂华，她退休前任中央编译局英文处处长，她以一名有水平的改稿者身份严格地检查了每一个例句。其次是我先生拉里，他是一名作家和新闻学教授，曾多年在中国任教并从事修改译文工作，他的专长使我受益非浅。这两位有知识的审校人，一位的母语是英语，一位的母语是汉语，他们提出的批评和建议很简单，但却是不可或缺的。"
-      ]
+      ],
+      "lastPracticed": 1766708224411,
+      "userTranslationZh": {
+        "type": "llm",
+        "text": "即使有着这些经历作为背景，但如果没有来自两位资深顾问的珍贵帮助，来自他们对我初稿的重复阅读，我也很难完成这本书。第一位是我的好朋友姜桂华，她作为前中央编译局英文处处长，带着专业审稿人那般挑剔的眼光检查书中的每一个例句。第二位是我的丈夫拉里，他作为作家和职业新闻工作者的经验以及长年在中国从事教育和译稿润色的经历，都给了我很大帮助。这两位学识渊博的编辑，且各自的语言都达到了母语水平，给出的建议和批评都非常直接且不可或缺。",
+        "timestamp": 1766707557706,
+        "history": [],
+        "score": 82
+      }
     }
   ]
 }
