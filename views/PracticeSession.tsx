@@ -387,7 +387,7 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
 
                 {/* Source Card */}
                 <div
-                    className={`flex-1 glass-panel rounded-2xl p-8 flex flex-col relative transition-all duration-500 ease-out transform animate-float shadow-2xl
+                    className={`flex-1 glass-panel rounded-2xl p-8 flex flex-col relative transition-all duration-500 ease-out transform shadow-2xl
             ${animDirection === 1 ? '-translate-x-20 opacity-0 scale-95' : animDirection === -1 ? 'translate-x-20 opacity-0 scale-95' : 'translate-x-0 opacity-100 scale-100'}
           `}
                     style={{ borderColor: 'var(--glass-border)', boxShadow: '0 25px 50px -12px var(--particle-blue)' }}
