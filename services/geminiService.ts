@@ -1,5 +1,16 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 
+// --- Constants ---
+const TTS_SAMPLE_RATE = 24000;
+
+// --- Custom Error ---
+export class TTSError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TTSError';
+  }
+}
+
 // Initialize Gemini
 // Note: In a real production app, API keys should be handled via backend proxy.
 // Here we rely on the environment variable as per instructions.
@@ -25,7 +36,7 @@ function decode(base64: string): Uint8Array {
 async function decodeAudioData(
   data: Uint8Array,
   ctx: AudioContext,
-  sampleRate: number = 24000,
+  sampleRate: number = TTS_SAMPLE_RATE,
   numChannels: number = 1,
 ): Promise<AudioBuffer> {
   const dataInt16 = new Int16Array(data.buffer);
@@ -43,6 +54,7 @@ async function decodeAudioData(
 
 /**
  * Generates speech from text using Gemini 2.5 Flash TTS
+ * @throws {TTSError} When TTS generation fails
  */
 export const playTextToSpeech = async (text: string, voiceName: 'Kore' | 'Puck' | 'Charon' | 'Fenrir' | 'Zephyr' = 'Kore') => {
   if (!apiKey) {
@@ -65,16 +77,16 @@ export const playTextToSpeech = async (text: string, voiceName: 'Kore' | 'Puck' 
     });
 
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    
+
     if (!base64Audio) {
-      throw new Error("No audio data returned");
+      throw new TTSError("No audio data returned");
     }
 
     // Audio Playback Logic
     const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({
-      sampleRate: 24000
+      sampleRate: TTS_SAMPLE_RATE
     });
-    
+
     const outputNode = outputAudioContext.createGain();
     outputNode.connect(outputAudioContext.destination);
 
@@ -82,7 +94,7 @@ export const playTextToSpeech = async (text: string, voiceName: 'Kore' | 'Puck' 
     const audioBuffer = await decodeAudioData(
       audioBytes,
       outputAudioContext,
-      24000,
+      TTS_SAMPLE_RATE,
       1
     );
 
@@ -93,6 +105,6 @@ export const playTextToSpeech = async (text: string, voiceName: 'Kore' | 'Puck' 
 
   } catch (error) {
     console.error("TTS Error:", error);
-    alert("Failed to generate speech. Please check API Key or quota.");
+    throw new TTSError("Failed to generate speech. Please check API Key or quota.");
   }
 };

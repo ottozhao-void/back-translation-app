@@ -32,4 +32,19 @@ export interface Article {
 
 export type PracticeMode = 'EN_TO_ZH' | 'ZH_TO_EN';
 
+// --- Settings Types ---
+export interface AppSettings {
+  autoSave: {
+    enabled: boolean;
+    delay: number; // ms
+  };
+  llmThreshold: number;
+  hotkeys: { [commandId: string]: string };
+}
 
+// --- Storage Keys ---
+export const STORAGE_KEYS = {
+  UPLOADS: 'aether_uploads_v1',
+  DELETED_STATIC: 'aether_deleted_static_v1',
+  PROGRESS: 'aether_progress_v1',
+};
