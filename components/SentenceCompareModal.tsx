@@ -178,7 +178,7 @@ export const SentenceCompareModal: React.FC<SentenceCompareModalProps> = ({
               </div>
               
               {/* Bottom: Reference(s) */}
-              <div className="flex-1 p-8 overflow-y-auto custom-scrollbar relative">
+              <div className="flex-1 px-8 pt-8 pb-20 overflow-y-auto custom-scrollbar relative">
                  <div className="flex items-center justify-between mb-4">
                     <div className="text-xs font-mono uppercase tracking-widest opacity-50">Reference</div>
                     {allRefSentences.length > 1 && (
