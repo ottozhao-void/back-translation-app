@@ -185,16 +185,16 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
 
         setIsSubmitted(true);
 
-        // Only save if LLM mode. Diff mode doesn't save per requirement 1.
-        if (feedbackMode === 'llm') {
-            onUpdateProgress(article.id, currentParagraph.id, {
-                type: feedbackMode,
-                text: inputValue,
-                timestamp: Date.now(),
-                score: finalScore
-            });
-        } else {
-            // Diff mode: Show modal
+        // Always save the user translation for both modes
+        onUpdateProgress(article.id, currentParagraph.id, {
+            type: feedbackMode,
+            text: inputValue,
+            timestamp: Date.now(),
+            score: finalScore
+        });
+
+        // Additionally show modal for diff mode
+        if (feedbackMode === 'diff') {
             setShowCompareModal(true);
         }
     };
