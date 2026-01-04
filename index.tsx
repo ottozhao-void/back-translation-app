@@ -354,7 +354,7 @@ const App: React.FC = () => {
           />
         ) : view === 'PRACTICE' && selectedArticle ? (
           <PracticeSession
-            article={selectedArticle}
+            article={articles.find(a => a.id === selectedArticle.id) || selectedArticle}
             mode={practiceMode}
             onUpdateProgress={updateArticleProgress}
             onAddReference={addReferenceTranslation}

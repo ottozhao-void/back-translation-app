@@ -1,46 +1,36 @@
 # Aether Translate (Back Translation App)
 
-## Project Overview
-Aether Translate is a web-based tool designed for practicing language translation (specifically English <-> Chinese) using the **back-translation** method. It features a modern, immersive UI with glassmorphism effects and utilizes Google's Gemini API for advanced features like Text-to-Speech (TTS) and translation feedback.
+## User/Project Details
+Aether Translate is a web-based tool for practicing language translation (specifically English <-> Chinese) using the **back-translation** method. Users translate a source text, and the system (or AI) translates it back to verify accuracy. The app features a modern, immersive UI with glassmorphism effects and utilizes Google's Gemini API for Text-to-Speech (TTS) and feedback.
 
 ## Tech Stack
-- **Frontend Framework:** React 19 (TypeScript)
-- **Build Tool:** Vite
-- **Styling:** Tailwind CSS (loaded via CDN in `index.html`), Custom CSS Variables for theming (Light/Dark).
-- **Backend:** Node.js
-    - **Development:** Custom Vite Plugin (`vite.config.ts`) handles API requests.
-    - **Production:** Express server (`server.js`) serves static assets and handles API requests.
-- **Data Storage:** Local filesystem (JSON/Markdown files) in `public/articles`.
-- **AI Integration:** Google GenAI SDK (`@google/genai`) for TTS and feedback.
+*   **Frontend Framework**: React 19 (TypeScript)
+*   **Build Tool**: Vite 6.2.0
+*   **Styling**: Tailwind CSS (via CDN), CSS Variables for theming (Light/Dark).
+*   **Runtime**: Node.js
+*   **Backend (Dev)**: Custom Vite Plugin (`vite.config.ts`)
+*   **Backend (Prod)**: Express (`server.js`)
+*   **AI Integration**: @google/genai (v1.33.0)
+*   **State Management**: React Hooks (locla state)
 
-## Architecture & Data Flow
-
-### The "Backend"
-Uniquely, this project handles backend logic differently in Dev vs. Prod to ensure a seamless local experience without a separate backend process in development.
-- **Development (`npm run dev`):** The `articleServerPlugin` in `vite.config.ts` intercepts requests to `/api/articles` and performs file system operations (read/write/rename/delete) directly on the `public/articles` directory.
-- **Production (`node server.js`):** An Express app serves the `dist/` folder and replicates the same API endpoints (`/api/articles/*`), performing operations on the `articles/` directory relative to the server script.
-
-### Data Storage
-- Articles are stored as files in `public/articles/`.
-- **Format:** JSON is preferred for maintaining translation history and metadata, but `.txt` and `.md` are supported for raw imports.
-- **Synchronization:** The backend logic attempts to keep `public/articles` (source) and `dist/articles` (build output) in sync during runtime to prevent data loss or stale reads.
-
-### AI Service
-- Located in `services/geminiService.ts`.
-- Uses `GoogleGenAI` client.
-- **TTS:** Generates speech using `gemini-2.5-flash-preview-tts` and plays it back using the Web Audio API (`AudioContext`).
-- **Key Management:** Relies on `process.env.API_KEY` (injected via Vite define or process env).
-
-## Key Directories & Files
-
-| Path | Description |
-| :--- | :--- |
-| `public/articles/` | The "Database". Contains all user articles. |
-| `vite.config.ts` | **Critical.** Contains the `articleServerPlugin` which acts as the backend during development. |
-| `server.js` | **Critical.** The production server script. Mirrors logic from `vite.config.ts`. |
-| `index.html` | Entry point. Contains **Tailwind CDN link** and **CSS Variable definitions** for the theme system. |
-| `services/geminiService.ts` | Handles interaction with Google Gemini API (primarily TTS). |
-| `feature-implementation/` | Documentation for current and planned features. |
+## Project Structure
+*   **Root-Level Source**: Note that source code (`views`, `components`, `utils`) resides in the project root, not a `src` directory.
+```
+d:\back-translation-app\
+├── components/           # Reusable UI components (Modals, Icons, etc.)
+├── feature-implementation/ # Feature documentation
+├── public/
+│   └── articles/         # Data storage (JSON/Markdown files)
+├── services/             # External services (geminiService.ts)
+├── utils/                # Utility functions
+├── views/                # Main page views (PracticeSession.tsx)
+├── index.html            # Entry point (Tailwind CDN, CSS Variables)
+├── index.tsx             # Main React entry
+├── server.js             # Production Express server
+├── vite.config.ts        # Vite config & Dev backend plugin
+├── tailwind.config.js    # (Optional/Virtual) Tailwind config
+└── GEMINI.md             # This context file
+```
 
 ## Development Workflow
 
@@ -49,22 +39,48 @@ Uniquely, this project handles backend logic differently in Dev vs. Prod to ensu
 npm install
 ```
 
-### Running Locally
+### Running Locally (Dev)
 ```bash
 npm run dev
 ```
-*   Starts Vite on port 3000.
-*   API requests are handled by Vite middleware.
-*   **Note:** If you modify API logic, you must update BOTH `vite.config.ts` and `server.js` to maintain parity.
+*   Starts Vite server on port 3000.
+*   **Note**: Backend API endpoints (`/api/articles`) are handled by the `articleServerPlugin` in `vite.config.ts`. Changes to API logic must be mirrored in `server.js` for production.
 
 ### Building for Production
 ```bash
 npm run build
 node server.js
 ```
+*   `npm run build` compiles the frontend to `dist/`.
+*   `node server.js` serves the static assets and handles API requests.
 
-## Conventions & Style
-- **Styling:** Use Tailwind utility classes primarily. For complex animations or glassmorphism specific to this app, rely on the CSS variables defined in `index.html` (`--glass-bg`, `--text-main`, etc.).
-- **State Management:** React Hooks (`useState`, `useEffect`, custom hooks).
-- **File Operations:** All file I/O happens in the "backend" layer (Vite plugin or Express). The frontend simply fetches `/api/articles`.
-- **Imports:** Uses ESM imports.
+### Running Tests
+*   *No automated testing framework is currently configured.*
+
+## Coding Standards
+
+### Naming Conventions
+*   **Files**: PascalCase for React components (e.g., `PracticeSession.tsx`), camelCase for utilities/functions (e.g., `geminiService.ts`).
+*   **Variables/Functions**: camelCase.
+*   **Directories**: lowercase/kebab-case (e.g., `feature-implementation`, `components`).
+
+### Component Structure
+*   Use **Functional Components** with React Hooks (`useState`, `useEffect`, custom hooks).
+*   Avoid class components.
+*   Keep components modular. Extract logical chunks into `components/` or `views/`.
+
+### Styling
+*   **Tailwind CSS**: Use utility classes for layout, spacing, and standard styling.
+*   **CSS Variables**: Use the variables defined in `index.html` for specific theme colors and effects (e.g., `var(--glass-bg)`, `var(--text-main)`).
+*   **Glassmorphism**: Use the `.glass-panel` class or `backdrop-filter` utilities combined with variables.
+
+### Architecture & Data Flow
+*   **"Backend" Parity**: The project uses a dual-backend strategy.
+    *   **Dev**: `vite.config.ts` intercepts requests.
+    *   **Prod**: `server.js` handles requests.
+    *   **Rule**: Any logic change to the API **MUST** be applied to BOTH files.
+*   **Data Storage**: `public/articles` is the source of truth. The backend syncs this with `dist/articles` to ensure data persistence across builds.
+
+### Error Handling
+*   Wrap AI and File I/O operations in try/catch blocks.
+*   Log errors to console in dev; return clear 500/400 JSON responses from API endpoints.
