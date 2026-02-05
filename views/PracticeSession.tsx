@@ -213,6 +213,12 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
       ${targetText}
 
       Please evaluate my translation below and provide detailed feedback and a score on a scale of 1 to 100. Offer some translation tips at the end.
+      1. Your analysis and review should be critical and nitpick any possible mistake.
+      2. Watch the following aspects carefully:
+         1. Whether or not being too mechanical
+         2. Is there a "Translationese" Issue
+         3. 
+         
 
       # My Translation
 

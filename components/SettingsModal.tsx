@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AppSettings } from '../types';
 import { AVAILABLE_COMMANDS } from '../constants';
+import { version } from '../package.json';
 import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon } from './Icons';
 
 interface SettingsModalProps {
@@ -106,6 +107,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                             <span>{item.name}</span>
                         </button>
                     ))}
+                    <div className="mt-auto px-4 pb-2">
+                        <span className="text-xs font-mono font-medium opacity-70 hover:opacity-100 transition-opacity" style={{ color: 'var(--text-secondary)' }}>
+                            v{version}
+                        </span>
+                    </div>
                 </div>
 
                 {/* Content */}
