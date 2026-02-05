@@ -17,9 +17,14 @@ app.use(express.static(path.join(__dirname, 'dist')));
 
 const articlesDir = path.join(__dirname, 'public', 'articles');
 const distArticlesDir = path.join(__dirname, 'dist', 'articles');
+const dataDir = path.join(__dirname, 'public', 'data');
+const distDataDir = path.join(__dirname, 'dist', 'data');
+const sentencesFile = path.join(dataDir, 'sentences.json');
+const distSentencesFile = path.join(distDataDir, 'sentences.json');
 
 // Ensure directories exist
 if (!fs.existsSync(articlesDir)) fs.mkdirSync(articlesDir, { recursive: true });
+if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 
 // API Routes
 app.get('/api/articles', (req, res) => {
@@ -111,6 +116,50 @@ app.get('/articles/:filename', (req, res, next) => {
         res.sendFile(filePath);
     } else {
         next();
+    }
+});
+
+// === Sentence API Routes ===
+
+// GET /api/sentences - Fetch all sentences
+app.get('/api/sentences', (req, res) => {
+    try {
+        if (fs.existsSync(sentencesFile)) {
+            const content = fs.readFileSync(sentencesFile, 'utf-8');
+            res.setHeader('Content-Type', 'application/json');
+            res.send(content);
+        } else {
+            // Return empty store if file doesn't exist
+            res.json({ version: 1, sentences: [], lastModified: Date.now() });
+        }
+    } catch (e) {
+        console.error('Failed to read sentences:', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// POST /api/sentences - Save sentence store
+app.post('/api/sentences', (req, res) => {
+    try {
+        const store = req.body;
+        if (!store || !Array.isArray(store.sentences)) {
+            return res.status(400).json({ error: 'Invalid sentence store format' });
+        }
+
+        const content = JSON.stringify(store, null, 2);
+
+        // Update public (Source of Truth)
+        fs.writeFileSync(sentencesFile, content);
+
+        // Update dist if it exists
+        if (fs.existsSync(distDataDir)) {
+            fs.writeFileSync(distSentencesFile, content);
+        }
+
+        res.json({ success: true, count: store.sentences.length });
+    } catch (e) {
+        console.error('Failed to save sentences:', e);
+        res.status(500).json({ error: 'Failed to save sentences' });
     }
 });
 

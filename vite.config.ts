@@ -23,9 +23,16 @@ function setupMiddleware(middlewares: any) {
     middlewares.use(async (req: any, res: any, next: any) => {
         const articlesDir = path.resolve(__dirname, 'public', 'articles');
         const distArticlesDir = path.resolve(__dirname, 'dist', 'articles');
-        
+        const dataDir = path.resolve(__dirname, 'public', 'data');
+        const distDataDir = path.resolve(__dirname, 'dist', 'data');
+        const sentencesFile = path.join(dataDir, 'sentences.json');
+        const distSentencesFile = path.join(distDataDir, 'sentences.json');
+
         if (!fs.existsSync(articlesDir)) {
           fs.mkdirSync(articlesDir, { recursive: true });
+        }
+        if (!fs.existsSync(dataDir)) {
+          fs.mkdirSync(dataDir, { recursive: true });
         }
 
         try {
@@ -81,6 +88,60 @@ function setupMiddleware(middlewares: any) {
               }
             });
             return;
+          }
+
+          // === Sentence API Routes ===
+          if (url.pathname === '/api/sentences') {
+            if (req.method === 'GET') {
+              try {
+                if (fs.existsSync(sentencesFile)) {
+                  const content = fs.readFileSync(sentencesFile, 'utf-8');
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(content);
+                } else {
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ version: 1, sentences: [], lastModified: Date.now() }));
+                }
+              } catch (e) {
+                console.error('Failed to read sentences:', e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ error: 'Failed to read sentences' }));
+              }
+              return;
+            }
+
+            if (req.method === 'POST') {
+              const chunks: Buffer[] = [];
+              req.on('data', (chunk: any) => chunks.push(chunk));
+              req.on('end', () => {
+                try {
+                  const store = JSON.parse(Buffer.concat(chunks).toString());
+                  if (!store || !Array.isArray(store.sentences)) {
+                    res.statusCode = 400;
+                    res.end(JSON.stringify({ error: 'Invalid sentence store format' }));
+                    return;
+                  }
+
+                  const content = JSON.stringify(store, null, 2);
+
+                  // Update public (Source of Truth)
+                  fs.writeFileSync(sentencesFile, content);
+
+                  // Update dist if it exists
+                  if (fs.existsSync(distDataDir)) {
+                    fs.writeFileSync(distSentencesFile, content);
+                  }
+
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ success: true, count: store.sentences.length }));
+                } catch (e) {
+                  console.error('Failed to save sentences:', e);
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ error: 'Failed to save sentences' }));
+                }
+              });
+              return;
+            }
           }
 
           if (url.pathname === '/api/articles') {

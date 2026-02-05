@@ -40,6 +40,7 @@ export interface AppSettings {
   };
   llmThreshold: number;
   hotkeys: { [commandId: string]: string };
+  practiceGranularity: 'sentence' | 'paragraph';  // Default: 'sentence'
 }
 
 // --- Storage Keys ---
@@ -48,3 +49,47 @@ export const STORAGE_KEYS = {
   DELETED_STATIC: 'aether_deleted_static_v1',
   PROGRESS: 'aether_progress_v1',
 };
+
+// === Sentence Mode Types ===
+
+/**
+ * 回译对 - 系统的基本单元
+ * A sentence pair is the fundamental unit for translation practice
+ */
+export interface SentencePair {
+  id: string;                    // Unique ID, format: {articleId}_{paragraphId}_s{index} or manual_{timestamp}_{suffix}
+  en: string;                    // English text
+  zh: string;                    // Chinese text
+
+  // Source information
+  sourceType: string;            // Source identifier: articleId | 'manual' | custom tag
+  sourceIndex?: number;          // Order index in original text (only for article-derived)
+  paragraphId?: string;          // Parent paragraph ID (only for article-derived)
+
+  // User practice data
+  userTranslationZh?: UserTranslation;  // EN->ZH mode user translation
+  userTranslationEn?: UserTranslation;  // ZH->EN mode user translation
+
+  // Metadata
+  createdAt: number;             // Creation timestamp
+  lastPracticed?: number;        // Last practice timestamp
+  tags?: string[];               // User-defined tags (optional, for future extension)
+}
+
+/**
+ * Sentence store structure for persistence
+ */
+export interface SentenceStore {
+  version: number;               // Data version for migrations
+  sentences: SentencePair[];     // All sentence pairs
+  lastModified: number;          // Last modification timestamp
+}
+
+/**
+ * Filter/grouping options for sentences
+ */
+export type SentenceFilterType =
+  | { type: 'article'; articleId: string }   // Filter by article
+  | { type: 'time'; order: 'asc' | 'desc' }  // Sort by time
+  | { type: 'random'; count?: number }       // Random selection
+  | { type: 'tag'; tag: string };            // Filter by tag (reserved)
