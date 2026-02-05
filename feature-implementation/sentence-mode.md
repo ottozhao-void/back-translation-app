@@ -836,10 +836,82 @@ groupBySource(sentences: SentencePair[]): Map<string, SentencePair[]>
 
 **TypeScript 编译**: ✅ 通过，无错误
 
-#### 下一步: Phase 2
+---
 
-准备实现核心 UI 组件：
-- `views/SentenceMode.tsx` - 主视图容器
-- `components/SentenceSidebar.tsx` - 渐进式披露侧边栏
-- `components/SentencePracticeArea.tsx` - 翻译练习区域
-- `components/AddSentenceModal.tsx` - 手动添加句子弹窗
+### Phase 2: 核心 UI ✅ 完成
+
+**实现日期**: 2026-02-05
+**分支**: `feature/sentence-mode`
+
+#### 完成的任务
+
+| 任务 | 文件 | 状态 | 说明 |
+|------|------|------|------|
+| 2.1 | `views/SentenceMode.tsx` | ✅ | 主视图容器，管理句子状态、选择和练习模式 |
+| 2.2 | `components/sentence-mode/SentenceSidebar.tsx` | ✅ | 两级渐进式披露侧边栏，含滑动动画 |
+| 2.3 | `components/sentence-mode/SentencePracticeArea.tsx` | ✅ | 练习界面，提交后并排显示用户译文和参考译文 |
+| 2.4 | `components/sentence-mode/AddSentenceModal.tsx` | ✅ | 手动添加句子对的弹窗 |
+| 2.5 | `components/sentence-mode/ImportArticleModal.tsx` | ✅ | 从现有文章导入句子的弹窗 |
+| 2.6 | `index.tsx` | ✅ | 用 SentenceMode 替换 ArticleList 作为 HOME 视图 |
+
+#### 文件变更统计
+
+```
+Created:
+  views/SentenceMode.tsx                              (130 lines) - 主视图容器
+  components/sentence-mode/SentenceSidebar.tsx        (250 lines) - 两级导航侧边栏
+  components/sentence-mode/SentencePracticeArea.tsx   (210 lines) - 练习区域
+  components/sentence-mode/AddSentenceModal.tsx       (105 lines) - 添加句子弹窗
+  components/sentence-mode/ImportArticleModal.tsx     (110 lines) - 导入文章弹窗
+
+Modified:
+  index.tsx                                           (~5 lines) - 集成 SentenceMode
+```
+
+#### 实现的功能
+
+**1. 两级侧边栏导航**
+- Level 1: 来源分类（文章、手动条目）+ 进度指示器（○/◐/●）
+- Level 2: 选中来源内的句子列表
+- 层级间平滑滑动动画 (300ms ease-out)
+
+**2. 练习区域**
+- 原文显示 + TTS 朗读支持
+- 用户翻译输入 + 自动保存（草稿模式）
+- 提交后并排对比显示（用户译文 + 参考译文）
+- 模式切换按钮 (EN→中 / 中→EN)
+- 快捷键支持 (⌘+Enter 提交)
+
+**3. 文章导入**
+- 选择现有文章转换为句子
+- 复用 Phase 1 的 `importFromArticle()` 工具函数
+- 自动去重（按句子 ID）
+
+**4. 手动添加句子**
+- 直接输入 EN/ZH 句子对
+- 表单验证（两个字段均必填）
+
+#### 架构决策
+
+| 决策 | 选择 | 原因 |
+|------|------|------|
+| 状态管理位置 | SentenceMode 组件内 | 遵循现有 App 模式，Props 向下传递 |
+| 组件目录结构 | `components/sentence-mode/` | 功能模块化，避免污染全局组件目录 |
+| 提交后反馈 | 并排显示用户译文+参考译文 | 用户需求确认，简化对比体验 |
+| HOME 视图替换 | 直接替换 ArticleList | 用户需求确认，SentenceMode 成为默认入口 |
+
+#### 样式规范
+
+- 复用现有 `glass-panel` 类实现玻璃拟态效果
+- 使用 CSS 变量保持主题一致性 (`--text-main`, `--surface-hover` 等)
+- 动画使用 Tailwind 的 `transition-transform` + `duration-300`
+- 进度指示器: ○ 未开始 (灰) / ◐ 草稿 (黄) / ● 已完成 (绿)
+
+**TypeScript 编译**: ✅ 通过，无错误
+
+#### 下一步: Phase 3
+
+准备实现集成与导航功能：
+- 主导航更新（添加 SentenceBase 标签或完全移除旧 Articles 入口）
+- Settings 中添加 Paragraph Mode 开关
+- 数据迁移工具（现有文章一键导入）

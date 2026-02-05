@@ -11,6 +11,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { ArticleList } from './views/ArticleList';
 import { ModeSelector } from './views/ModeSelector';
 import { PracticeSession } from './views/PracticeSession';
+import { SentenceMode } from './views/SentenceMode';
 
 // --- Types for App State ---
 type ViewState = 'HOME' | 'MODE_SELECT' | 'PRACTICE';
@@ -338,13 +339,9 @@ const App: React.FC = () => {
             <div className="text-xl font-light animate-pulse" style={{ color: 'var(--text-secondary)' }}>Loading...</div>
           </div>
         ) : view === 'HOME' ? (
-          <ArticleList
+          <SentenceMode
             articles={articles}
-            onSelect={handleArticleSelect}
-            onUpload={handleArticleUpload}
-            onCreate={handleArticleCreate}
-            onDelete={handleArticleDelete}
-            onRename={handleArticleRename}
+            appSettings={appSettings}
           />
         ) : view === 'MODE_SELECT' && selectedArticle ? (
           <ModeSelector
