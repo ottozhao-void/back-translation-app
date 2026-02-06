@@ -14,4 +14,5 @@ export const AVAILABLE_COMMANDS = [
   { id: 'compare', label: 'Open Compare Modal', default: 'C' },
   { id: 'playAudio', label: 'Play Audio', default: 'Alt+P' },
   { id: 'autoSave', label: 'Trigger Auto Save', default: 'Ctrl+S' },
+  { id: 'toggleSidebar', label: 'Toggle Sidebar', default: '' },
 ];

@@ -16,6 +16,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     const [autoSaveDelay, setAutoSaveDelay] = useState(settings.autoSave.delay / 1000);
     const [llmThreshold, setLlmThreshold] = useState(settings.llmThreshold);
     const [hotkeys, setHotkeys] = useState(settings.hotkeys || {});
+    const [practiceGranularity, setPracticeGranularity] = useState<'sentence' | 'paragraph'>(settings.practiceGranularity || 'sentence');
     const [recordingCommandId, setRecordingCommandId] = useState<string | null>(null);
 
     const handleSave = () => {
@@ -25,7 +26,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                 delay: autoSaveDelay * 1000
             },
             llmThreshold,
-            hotkeys
+            hotkeys,
+            practiceGranularity
         });
         onClose();
     };
@@ -181,6 +183,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                                         onChange={(e) => setLlmThreshold(parseInt(e.target.value))}
                                         className="w-full accent-[var(--text-main)]"
                                     />
+                                </div>
+
+                                {/* Setting Item: Practice Granularity */}
+                                <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Paragraph Mode</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Practice at paragraph level instead of sentences</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setPracticeGranularity(prev => prev === 'sentence' ? 'paragraph' : 'sentence')}
+                                        className={`w-12 h-6 rounded-full transition-colors relative ${practiceGranularity === 'paragraph' ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${practiceGranularity === 'paragraph' ? 'left-7' : 'left-1'}`} />
+                                    </button>
                                 </div>
 
                             </div>

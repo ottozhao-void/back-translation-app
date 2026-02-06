@@ -202,3 +202,116 @@ export const groupBySource = (
 
   return groups;
 };
+
+// === Batch Import Types and Functions ===
+
+export type ImportMode = 'batch' | 'paragraph' | 'article';
+
+export interface ImportResult {
+  success: boolean;
+  count: number;
+  error?: string;
+}
+
+/**
+ * Creates sentence pairs from batch import (line-by-line)
+ * Each line in enLines corresponds to the same index in zhLines
+ */
+export const createBatchSentences = (
+  enLines: string[],
+  zhLines: string[]
+): SentencePair[] => {
+  const timestamp = Date.now();
+  const maxLen = Math.max(enLines.length, zhLines.length);
+  const pairs: SentencePair[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      id: `batch_${timestamp}_${i}`,
+      en: enLines[i]?.trim() || '',
+      zh: zhLines[i]?.trim() || '',
+      sourceType: 'batch',
+      sourceIndex: i,
+      createdAt: timestamp,
+    });
+  }
+
+  return pairs;
+};
+
+/**
+ * Creates sentence pairs from paragraph import (auto-split)
+ */
+export const createParagraphSentences = (
+  enSentences: string[],
+  zhSentences: string[]
+): SentencePair[] => {
+  const timestamp = Date.now();
+  const sourceType = `paragraph_${timestamp}`;
+  const maxLen = Math.max(enSentences.length, zhSentences.length);
+  const pairs: SentencePair[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      id: `${sourceType}_s${i}`,
+      en: enSentences[i]?.trim() || '',
+      zh: zhSentences[i]?.trim() || '',
+      sourceType,
+      sourceIndex: i,
+      createdAt: timestamp,
+    });
+  }
+
+  return pairs;
+};
+
+/**
+ * Creates sentence pairs from article import (auto-split with article context)
+ */
+export const createArticleSentences = (
+  enSentences: string[],
+  zhSentences: string[]
+): SentencePair[] => {
+  const timestamp = Date.now();
+  const sourceType = `article_${timestamp}`;
+  const maxLen = Math.max(enSentences.length, zhSentences.length);
+  const pairs: SentencePair[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      id: `${sourceType}_s${i}`,
+      en: enSentences[i]?.trim() || '',
+      zh: zhSentences[i]?.trim() || '',
+      sourceType,
+      sourceIndex: i,
+      createdAt: timestamp,
+    });
+  }
+
+  return pairs;
+};
+
+/**
+ * Adds multiple sentences to the store at once (batch operation)
+ */
+export const addSentencesBatch = async (
+  newSentences: SentencePair[]
+): Promise<ImportResult> => {
+  try {
+    const sentences = await fetchSentences();
+    const merged = [...sentences, ...newSentences];
+    const success = await saveSentences(merged);
+    return {
+      success,
+      count: newSentences.length,
+      error: success ? undefined : 'Failed to save sentences',
+    };
+  } catch (error) {
+    console.error('Failed to add sentences batch:', error);
+    return {
+      success: false,
+      count: 0,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+};

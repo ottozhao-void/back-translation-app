@@ -81,9 +81,11 @@ interface SentenceItemProps {
   isSelected: boolean;
   practiceMode: PracticeMode;
   onClick: () => void;
+  onContextMenu: (e: React.MouseEvent) => void;
+  onMenuClick: (e: React.MouseEvent) => void;
 }
 
-const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected, practiceMode, onClick }) => {
+const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected, practiceMode, onClick, onContextMenu, onMenuClick }) => {
   const translation = practiceMode === 'EN_TO_ZH' ? sentence.userTranslationZh : sentence.userTranslationEn;
   const displayText = practiceMode === 'EN_TO_ZH' ? sentence.en : sentence.zh;
 
@@ -100,9 +102,10 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
   }
 
   return (
-    <button
+    <div
       onClick={onClick}
-      className={`w-full text-left p-3 transition-all duration-150 border-l-3 ${
+      onContextMenu={onContextMenu}
+      className={`w-full text-left p-3 transition-all duration-150 border-l-3 cursor-pointer group ${
         isSelected
           ? 'bg-[var(--surface-active)] border-l-[var(--text-main)]'
           : 'hover:bg-[var(--surface-hover)] border-l-transparent'
@@ -121,9 +124,23 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
             {displayText.slice(0, 60)}{displayText.length > 60 ? '...' : ''}
           </p>
         </div>
-        <span className={`text-xs ${statusColor}`}>{statusIcon}</span>
+        <div className="flex items-center gap-1">
+          <span className={`text-xs ${statusColor}`}>{statusIcon}</span>
+          {/* Three dots menu button */}
+          <button
+            onClick={onMenuClick}
+            className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-[var(--surface-hover)] transition-all"
+            title="More options"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" style={{ color: 'var(--text-secondary)' }}>
+              <circle cx="12" cy="5" r="2" />
+              <circle cx="12" cy="12" r="2" />
+              <circle cx="12" cy="19" r="2" />
+            </svg>
+          </button>
+        </div>
       </div>
-    </button>
+    </div>
   );
 };
 
@@ -132,8 +149,10 @@ interface SentenceSidebarProps {
   selectedId: string | null;
   practiceMode: PracticeMode;
   onSelectSentence: (id: string) => void;
-  onAddSentence: () => void;
-  onImportArticle: () => void;
+  onImport: () => void;
+  onDeleteSentence?: (id: string) => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
 type SidebarLevel =
@@ -145,10 +164,13 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   selectedId,
   practiceMode,
   onSelectSentence,
-  onAddSentence,
-  onImportArticle
+  onImport,
+  onDeleteSentence,
+  isCollapsed = false,
+  onToggleCollapse
 }) => {
   const [sidebarState, setSidebarState] = useState<SidebarLevel>({ level: 'sources' });
+  const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 
   // Group sentences by sourceType
   const groupedSentences = React.useMemo(() => {
@@ -176,26 +198,73 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
     setSidebarState({ level: 'sources' });
   };
 
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = () => setContextMenu(null);
+    if (contextMenu) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [contextMenu]);
+
+  const handleContextMenu = (e: React.MouseEvent, sentenceId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ id: sentenceId, x: e.clientX, y: e.clientY });
+  };
+
+  const handleMenuClick = (e: React.MouseEvent, sentenceId: string) => {
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).getBoundingClientRect();
+    setContextMenu({ id: sentenceId, x: rect.right, y: rect.top });
+  };
+
+  const handleDelete = (sentenceId: string) => {
+    if (onDeleteSentence) {
+      onDeleteSentence(sentenceId);
+    }
+    setContextMenu(null);
+  };
+
   const isSourcesView = sidebarState.level === 'sources';
 
+  // Collapsed state - show only minimal content
+  if (isCollapsed) {
+    return (
+      <div className="w-10 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full bg-[var(--surface-hover)]/20">
+        {/* Vertical text indicator */}
+        <div className="flex-1 flex items-center justify-center">
+          <span
+            className="text-xs font-mono uppercase tracking-widest transform -rotate-90 whitespace-nowrap"
+            style={{ color: 'var(--text-secondary)' }}
+          >
+            {sentences.length} items
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-72 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full overflow-hidden bg-[var(--surface-hover)]/20">
+    <div className="w-72 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full overflow-hidden bg-[var(--surface-hover)]/20 transition-all duration-300">
       {/* Header */}
       <div className="p-4 border-b border-[var(--glass-border)] flex-shrink-0">
-        {isSourcesView ? (
-          <h2 className="text-sm font-mono uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
-            Sources
-          </h2>
-        ) : (
-          <button
-            onClick={handleBack}
-            className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity"
-            style={{ color: 'var(--text-main)' }}
-          >
-            <ArrowLeftIcon />
-            <span className="truncate">{getSourceDisplayName(sidebarState.sourceType)}</span>
-          </button>
-        )}
+        <div className="min-w-0">
+          {isSourcesView ? (
+            <h2 className="text-sm font-mono uppercase tracking-widest truncate" style={{ color: 'var(--text-secondary)' }}>
+              Sources
+            </h2>
+          ) : (
+            <button
+              onClick={handleBack}
+              className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity max-w-full"
+              style={{ color: 'var(--text-main)' }}
+            >
+              <ArrowLeftIcon />
+              <span className="truncate">{getSourceDisplayName(sidebarState.sourceType)}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content with slide animation */}
@@ -230,7 +299,7 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
             isSourcesView ? 'translate-x-full' : 'translate-x-0'
           }`}
         >
-          {currentSentences.map((sentence, index) => (
+          {currentSentences.map((sentence: SentencePair, index: number) => (
             <SentenceItem
               key={sentence.id}
               sentence={sentence}
@@ -238,10 +307,37 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               isSelected={sentence.id === selectedId}
               practiceMode={practiceMode}
               onClick={() => onSelectSentence(sentence.id)}
+              onContextMenu={(e) => handleContextMenu(e, sentence.id)}
+              onMenuClick={(e) => handleMenuClick(e, sentence.id)}
             />
           ))}
         </div>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          className="fixed z-50 py-1 min-w-32 rounded-lg shadow-xl border border-[var(--glass-border)]"
+          style={{
+            left: contextMenu.x,
+            top: contextMenu.y,
+            backgroundColor: 'var(--bg-main)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => handleDelete(contextMenu.id)}
+            className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+            style={{ color: 'var(--text-main)' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+            <span className="text-red-400">Delete</span>
+          </button>
+        </div>
+      )}
 
       {/* Footer with progress (Level 2 only) */}
       {!isSourcesView && (
@@ -250,24 +346,16 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         </div>
       )}
 
-      {/* Action Buttons (Level 1 only) */}
+      {/* Action Button (Level 1 only) */}
       {isSourcesView && (
-        <div className="p-4 border-t border-[var(--glass-border)] space-y-2 flex-shrink-0">
+        <div className="p-4 border-t border-[var(--glass-border)] flex-shrink-0">
           <button
-            onClick={onAddSentence}
+            onClick={onImport}
             className="w-full py-2 px-4 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
             style={{ color: 'var(--text-main)' }}
           >
             <span>+</span>
-            <span>Add Sentence</span>
-          </button>
-          <button
-            onClick={onImportArticle}
-            className="w-full py-2 px-4 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
-            style={{ color: 'var(--text-main)' }}
-          >
-            <span>📥</span>
-            <span>Import Article</span>
+            <span>Import</span>
           </button>
         </div>
       )}

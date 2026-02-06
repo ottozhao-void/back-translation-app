@@ -145,6 +145,27 @@ export const UserCircleIcon = () => (
     </svg>
 );
 
+// --- Sidebar Toggle Icons (Obsidian-style) ---
+export const SidebarCollapseIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        {/* Left panel */}
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+        {/* Collapse arrow */}
+        <polyline points="15 9 12 12 15 15" />
+    </svg>
+);
+
+export const SidebarExpandIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+        {/* Left panel */}
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <line x1="9" y1="3" x2="9" y2="21" />
+        {/* Expand arrow */}
+        <polyline points="13 9 16 12 13 15" />
+    </svg>
+);
+
 // --- Particle Background Component ---
 export const ParticleBackground: React.FC = () => {
     return (

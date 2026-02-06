@@ -38,7 +38,7 @@ const App: React.FC = () => {
         return { autoSave: JSON.parse(old), llmThreshold: 85, hotkeys: {} };
       }
     }
-    return { autoSave: { enabled: true, delay: 3000 }, llmThreshold: 85, hotkeys: {} };
+    return { autoSave: { enabled: true, delay: 3000 }, llmThreshold: 85, hotkeys: {}, practiceGranularity: 'sentence' };
   });
 
   const updateAppSettings = (newSettings: AppSettings) => {

@@ -20,7 +20,9 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isFlipped, setIsFlipped] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [copyFeedback, setCopyFeedback] = useState(false);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastSavedText = useRef('');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -39,6 +41,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     if (!sentence) {
       setInputValue('');
       setIsSubmitted(false);
+      setIsFlipped(false);
       lastSavedText.current = '';
       return;
     }
@@ -47,10 +50,12 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
       setInputValue(existingTranslation.text);
       lastSavedText.current = existingTranslation.text;
       setIsSubmitted(existingTranslation.type !== 'draft');
+      setIsFlipped(false);
     } else {
       setInputValue('');
       lastSavedText.current = '';
       setIsSubmitted(false);
+      setIsFlipped(false);
     }
     setSaveStatus('saved');
 
@@ -96,6 +101,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     if (!sentence || !inputValue.trim()) return;
 
     setIsSubmitted(true);
+    setIsFlipped(true); // Flip to show reference
     onSubmit(sentence.id, {
       type: 'diff', // Simple mode - no LLM scoring
       text: inputValue,
@@ -106,7 +112,44 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
   const handleEdit = () => {
     setIsSubmitted(false);
+    setIsFlipped(false);
     setTimeout(() => inputRef.current?.focus(), 100);
+  };
+
+  const handleFlipCard = () => {
+    if (isSubmitted) {
+      setIsFlipped(prev => !prev);
+    }
+  };
+
+  // Generate LLM prompt and copy to clipboard
+  const handleLLMFeedback = async () => {
+    if (!sentence) return;
+
+    const prompt = `Please evaluate my translation and provide feedback.
+
+**Original Text (${practiceMode === 'EN_TO_ZH' ? 'English' : 'Chinese'}):**
+${sourceText}
+
+**Reference Translation (${practiceMode === 'EN_TO_ZH' ? 'Chinese' : 'English'}):**
+${referenceText}
+
+**My Translation:**
+${inputValue}
+
+Please:
+1. Rate my translation on a scale of 1-10
+2. Point out any errors or awkward expressions
+3. Explain what could be improved
+4. Provide a suggested improved version if needed`;
+
+    try {
+      await navigator.clipboard.writeText(prompt);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -133,13 +176,17 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
   return (
     <div className="flex-1 flex flex-col p-8 overflow-hidden">
-      {/* Mode Toggle */}
+      {/* Mode Toggle - Visually Distinct */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
           <button
             onClick={onModeToggle}
-            className="px-4 py-2 rounded-full text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors"
-            style={{ color: 'var(--text-main)' }}
+            className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            style={{
+              background: 'linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%)',
+              color: 'white',
+              border: '2px solid rgba(255,255,255,0.2)'
+            }}
           >
             {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
           </button>
@@ -157,28 +204,89 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
       {/* Main Content Area */}
       <div className="flex-1 flex gap-6 min-h-0">
-        {/* Original Text Card */}
-        <div className="flex-1 glass-panel rounded-2xl p-6 flex flex-col">
-          <div className="flex justify-between items-start mb-4">
-            <span className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
-              Original
-            </span>
-            <button
-              onClick={() => playTextToSpeech(sourceText)}
-              className="p-1 hover:opacity-80 transition-opacity"
-              style={{ color: 'var(--text-secondary)' }}
-              title="Read Aloud"
+        {/* Original Text Card - Flippable */}
+        <div
+          className="flex-1 perspective-1000"
+          style={{ perspective: '1000px' }}
+        >
+          <div
+            className={`relative w-full h-full transition-transform duration-500 cursor-pointer ${isSubmitted ? 'hover:scale-[1.01]' : ''}`}
+            style={{
+              transformStyle: 'preserve-3d',
+              transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+            }}
+            onClick={handleFlipCard}
+          >
+            {/* Front - Original Text */}
+            <div
+              className="absolute inset-0 glass-panel rounded-2xl p-6 flex flex-col"
+              style={{ backfaceVisibility: 'hidden' }}
             >
-              <SpeakerIcon />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <p
-              className={`text-xl leading-relaxed font-serif-sc ${practiceMode === 'ZH_TO_EN' ? 'font-medium' : 'font-light'}`}
-              style={{ color: 'var(--text-main)' }}
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-xs font-mono uppercase tracking-widest" style={{ color: 'var(--text-secondary)' }}>
+                  Original
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); playTextToSpeech(sourceText); }}
+                  className="p-1 hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Read Aloud"
+                >
+                  <SpeakerIcon />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <p
+                  className={`text-xl leading-relaxed font-serif-sc ${practiceMode === 'ZH_TO_EN' ? 'font-medium' : 'font-light'}`}
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  {sourceText}
+                </p>
+              </div>
+              {isSubmitted && (
+                <div className="mt-4 text-center">
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                    Click to see reference ↻
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Back - Reference Text */}
+            <div
+              className="absolute inset-0 glass-panel rounded-2xl p-6 flex flex-col border-2 border-emerald-500/30"
+              style={{
+                backfaceVisibility: 'hidden',
+                transform: 'rotateY(180deg)'
+              }}
             >
-              {sourceText}
-            </p>
+              <div className="flex justify-between items-start mb-4">
+                <span className="text-xs font-mono uppercase tracking-widest text-emerald-400">
+                  Reference
+                </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); playTextToSpeech(referenceText); }}
+                  className="p-1 hover:opacity-80 transition-opacity"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Read Aloud"
+                >
+                  <SpeakerIcon />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <p
+                  className={`text-xl leading-relaxed font-serif-sc ${practiceMode === 'EN_TO_ZH' ? 'font-medium' : 'font-light'}`}
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  {referenceText}
+                </p>
+              </div>
+              <div className="mt-4 text-center">
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  Click to see original ↻
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -226,40 +334,29 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
               </div>
             </>
           ) : (
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <p className="text-lg leading-relaxed font-serif-sc" style={{ color: 'var(--text-main)' }}>
-                {inputValue}
-              </p>
+            <div className="flex-1 flex flex-col">
+              <div className="flex-1 overflow-y-auto custom-scrollbar">
+                <p className="text-lg leading-relaxed font-serif-sc" style={{ color: 'var(--text-main)' }}>
+                  {inputValue}
+                </p>
+              </div>
+              {/* LLM Feedback Button */}
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleLLMFeedback}
+                  className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] hover:border-[var(--text-secondary)] flex items-center gap-2"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Copy prompt to clipboard for LLM feedback"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+                  </svg>
+                  {copyFeedback ? 'Copied!' : 'LLM Feedback'}
+                </button>
+              </div>
             </div>
           )}
         </div>
-
-        {/* Reference Card (shown after submit) */}
-        {isSubmitted && (
-          <div className="flex-1 glass-panel rounded-2xl p-6 flex flex-col border-2 border-emerald-500/30">
-            <div className="flex justify-between items-start mb-4">
-              <span className="text-xs font-mono uppercase tracking-widest text-emerald-400">
-                Reference
-              </span>
-              <button
-                onClick={() => playTextToSpeech(referenceText)}
-                className="p-1 hover:opacity-80 transition-opacity"
-                style={{ color: 'var(--text-secondary)' }}
-                title="Read Aloud"
-              >
-                <SpeakerIcon />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto custom-scrollbar">
-              <p
-                className={`text-lg leading-relaxed font-serif-sc ${practiceMode === 'EN_TO_ZH' ? 'font-medium' : 'font-light'}`}
-                style={{ color: 'var(--text-main)' }}
-              >
-                {referenceText}
-              </p>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
