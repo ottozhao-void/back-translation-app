@@ -4,6 +4,7 @@ import { AVAILABLE_COMMANDS } from '../constants';
 import { ArrowLeftIcon, ArrowRightIcon, SpeakerIcon, ParticleBackground } from '../components/Icons';
 import { Toast } from '../components/Toast';
 import { SentenceCompareModal } from '../components/SentenceCompareModal';
+import { KeyboardHints } from '../components/KeyboardHints';
 import { playTextToSpeech } from '../services/geminiService';
 
 // --- Helper: Hotkey Matcher ---
@@ -58,6 +59,7 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
     const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
     const [toastMessage, setToastMessage] = useState<string | null>(null);
     const [showCompareModal, setShowCompareModal] = useState(false);
+    const [showKeyboardHints, setShowKeyboardHints] = useState(false);
 
     const currentParagraph = article.content[currentIndex];
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -233,6 +235,13 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
     const handleKeyDown = (e: React.KeyboardEvent) => {
         const isInput = (e.target as HTMLElement).tagName === 'TEXTAREA' || (e.target as HTMLElement).tagName === 'INPUT';
 
+        // Toggle keyboard hints with ? key
+        if (e.key === '?' && !isInput) {
+            e.preventDefault();
+            setShowKeyboardHints(prev => !prev);
+            return;
+        }
+
         const getHotkey = (id: string) => appSettings.hotkeys[id] || AVAILABLE_COMMANDS.find(c => c.id === id)?.default || '';
         const checkCmd = (id: string) => matchesHotkey(e, getHotkey(id));
 
@@ -326,6 +335,13 @@ export const PracticeSession: React.FC<PracticeSessionProps> = ({ article, mode,
                     additionalReferences={mode === 'EN_TO_ZH' ? currentParagraph.zh.slice(1) : currentParagraph.en.slice(1)}
                     onClose={() => setShowCompareModal(false)}
                     onAddReference={(text) => onAddReference(article.id, currentParagraph.id, text, mode === 'EN_TO_ZH' ? 'zh' : 'en')}
+                />
+            )}
+
+            {showKeyboardHints && (
+                <KeyboardHints
+                    appSettings={appSettings}
+                    onClose={() => setShowKeyboardHints(false)}
                 />
             )}
 

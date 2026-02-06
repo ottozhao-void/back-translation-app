@@ -145,6 +145,46 @@ export const UserCircleIcon = () => (
     </svg>
 );
 
+// --- Flag Icons ---
+export const UKFlagIcon: React.FC<{ className?: string }> = ({ className = 'w-8 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30" className={className}>
+        <clipPath id="uk-clip">
+            <path d="M0,0 v30 h60 v-30 z" />
+        </clipPath>
+        <clipPath id="uk-clip-diag">
+            <path d="M30,15 h30 v15 z v15 h-30 z h-30 v-15 z v-15 h30 z" />
+        </clipPath>
+        <g clipPath="url(#uk-clip)">
+            <path d="M0,0 v30 h60 v-30 z" fill="#012169" />
+            <path d="M0,0 L60,30 M60,0 L0,30" stroke="#fff" strokeWidth="6" />
+            <path d="M0,0 L60,30 M60,0 L0,30" clipPath="url(#uk-clip-diag)" stroke="#C8102E" strokeWidth="4" />
+            <path d="M30,0 v30 M0,15 h60" stroke="#fff" strokeWidth="10" />
+            <path d="M30,0 v30 M0,15 h60" stroke="#C8102E" strokeWidth="6" />
+        </g>
+    </svg>
+);
+
+export const ChinaFlagIcon: React.FC<{ className?: string }> = ({ className = 'w-8 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20" className={className}>
+        <rect width="30" height="20" fill="#DE2910" />
+        <g fill="#FFDE00">
+            {/* Large star */}
+            <polygon points="5,4 6.18,7.24 9.51,7.24 6.67,9.27 7.64,12.5 5,10.5 2.36,12.5 3.33,9.27 0.49,7.24 3.82,7.24" />
+            {/* Small stars */}
+            <polygon points="11,2 11.38,3.18 12.62,3.18 11.62,3.82 12,5 11,4.36 10,5 10.38,3.82 9.38,3.18 10.62,3.18" transform="rotate(23 11 3.5)" />
+            <polygon points="13,5 13.38,6.18 14.62,6.18 13.62,6.82 14,8 13,7.36 12,8 12.38,6.82 11.38,6.18 12.62,6.18" transform="rotate(-5 13 6.5)" />
+            <polygon points="13,9 13.38,10.18 14.62,10.18 13.62,10.82 14,12 13,11.36 12,12 12.38,10.82 11.38,10.18 12.62,10.18" transform="rotate(23 13 10.5)" />
+            <polygon points="11,12 11.38,13.18 12.62,13.18 11.62,13.82 12,15 11,14.36 10,15 10.38,13.82 9.38,13.18 10.62,13.18" transform="rotate(45 11 13.5)" />
+        </g>
+    </svg>
+);
+
+export const ArrowForwardIcon: React.FC<{ className?: string }> = ({ className = 'w-6 h-6' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+    </svg>
+);
+
 // --- Sidebar Toggle Icons (Obsidian-style) ---
 export const SidebarCollapseIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">

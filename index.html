@@ -43,12 +43,12 @@
       [data-theme="light"] {
         --bg-main: #f0f2f5;
         --text-main: #1f2937;
-        --text-secondary: #6b7280;
-        --glass-bg: rgba(255, 255, 255, 0.85);
-        --glass-border: rgba(0, 0, 0, 0.1);
+        --text-secondary: #4b5563;
+        --glass-bg: rgba(255, 255, 255, 0.92);
+        --glass-border: rgba(0, 0, 0, 0.15);
         --border-high-contrast: rgba(0, 0, 0, 0.6);
-        --surface-hover: rgba(0, 0, 0, 0.05);
-        --surface-active: rgba(0, 0, 0, 0.1);
+        --surface-hover: rgba(0, 0, 0, 0.06);
+        --surface-active: rgba(0, 0, 0, 0.12);
         --scrollbar-thumb: #cbd5e1;
         --scrollbar-thumb-hover: #94a3b8;
         --particle-blue: rgba(59, 130, 246, 0.08);
@@ -137,6 +137,51 @@
       .diff-delete {
         color: #eab308;
         /* For missing text, we want to show it so the user knows what they missed */
+      }
+
+      /* Accessibility: Focus states for keyboard navigation */
+      :focus-visible {
+        outline: 2px solid var(--text-main);
+        outline-offset: 2px;
+        border-radius: 4px;
+      }
+
+      /* Remove default focus ring for mouse users */
+      :focus:not(:focus-visible) {
+        outline: none;
+      }
+
+      /* Respect reduced motion preference */
+      @media (prefers-reduced-motion: reduce) {
+        .animate-float,
+        .particle-blob {
+          animation: none !important;
+        }
+
+        *,
+        *::before,
+        *::after {
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* Fade-in animation */
+      .fade-in {
+        animation: fadeIn 0.3s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
     </style>
   <script type="importmap">

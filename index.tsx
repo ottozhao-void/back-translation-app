@@ -6,6 +6,7 @@ import { fetchArticles, parseMarkdownArticle, saveArticleToServer, deleteArticle
 // Components
 import { SettingsIcon, SunIcon, MoonIcon } from './components/Icons';
 import { SettingsModal } from './components/SettingsModal';
+import { LoadingSpinner } from './components/Skeleton';
 
 // Views
 import { ArticleList } from './views/ArticleList';
@@ -335,9 +336,7 @@ const App: React.FC = () => {
 
       <main className="relative z-10 max-w-[1920px] mx-auto px-6 h-[calc(100vh-80px)]">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-xl font-light animate-pulse" style={{ color: 'var(--text-secondary)' }}>Loading...</div>
-          </div>
+          <LoadingSpinner text="Loading articles..." />
         ) : view === 'HOME' ? (
           <SentenceMode
             articles={articles}
