@@ -1369,7 +1369,127 @@
       "sourceType": "batch",
       "sourceIndex": 25,
       "createdAt": 1770338833593
+    },
+    {
+      "id": "article_1770384510650_s0",
+      "en": "### Global R&D Shift: China Takes the Top Spot",
+      "zh": "全球研发格局变迁：中国首次登顶",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 0,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s1",
+      "en": "For the first time in history, China has surpassed the United States to become the world’s leading spender on research and development.",
+      "zh": "历史上首次，中国超越美国成为全球研发支出第一大国。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 1,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s2",
+      "en": "In 2024, China invested $785.9 billion in R&D, capturing a 27.4% share of the global total.",
+      "zh": "2024年中国研发投入达7859亿美元，占全球总额的27.4%。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 2,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s3",
+      "en": "This milestone marks a significant shift in the scientific balance of power, as the U.S. moves to second place with $781.8 billion (27.2%).",
+      "zh": "这一里程碑标志着科学力量平衡的重大转变，美国以7818亿美元（27.2%）的投入退居第二。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 3,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s4",
+      "en": "### Divergent Strategies",
+      "zh": "战略路径分化",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 4,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s5",
+      "en": "While both nations dominate the landscape—controlling a combined 54.7% of global R&D—their investment engines differ fundamentally.",
+      "zh": "尽管中美两国共同占据全球研发总支出的54.7%，但其投入机制存在本质差异。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 5,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s6",
+      "en": "China’s surge is propelled by a centralized model, where government laboratories channel funding into national strategic priorities like energy and biotechnology.",
+      "zh": "中国的迅猛增长由集中化模式驱动，政府实验室将资金导向能源、生物技术等国家战略重点领域。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 6,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s7",
+      "en": "In contrast, American R&D remains heavily reliant on the private sector, driven by corporate giants such as Amazon, Alphabet, and Meta.",
+      "zh": "相比之下，美国研发仍高度依赖私营部门，主要由亚马逊、字母表和元平台等企业巨头推动。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 7,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s8",
+      "en": "### The Rise of Asia",
+      "zh": "亚洲研发崛起",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 8,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s9",
+      "en": "The data highlights a broader geopolitical pivot toward Asia, which now accounts for 45% of all global R&D activity.",
+      "zh": "数据凸显了全球研发活动向亚洲倾斜的宏观趋势，该地区现已占据全球研发总量的45%。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 9,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s10",
+      "en": "While Japan remains the third-largest spender at $186.0 billion, its share of the global pie has seen a sharp decline since 2000.",
+      "zh": "日本虽以1860亿美元保持第三大研发支出国地位，但其全球份额自2000年以来已大幅萎缩。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 10,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s11",
+      "en": "Meanwhile, South Korea and India are accelerating their presence, pushing the region to the forefront of innovation.",
+      "zh": "与此同时，韩国和印度正加速提升研发实力，推动该地区站上创新前沿。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 11,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s12",
+      "en": "### Europe’s Changing Position",
+      "zh": "欧洲地位演变",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 12,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s13",
+      "en": "European heavyweights Germany, the UK, and France maintain positions within the top 10, yet they face a shrinking share of the global market.",
+      "zh": "欧洲主要国家德国、英国和法国仍保持全球前十地位，但其全球市场份额持续收缩。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 13,
+      "createdAt": 1770384510650
+    },
+    {
+      "id": "article_1770384510650_s14",
+      "en": "However, there are sectors of resilience: European corporate investment in healthcare and energy saw double-digit growth in 2024, outpacing competitors in both the U.S. and Asia.",
+      "zh": "不过部分领域展现出韧性：2024年欧洲企业在医疗健康和能源领域的投资实现两位数增长，增速超越美国 and 亚洲的竞争对手。",
+      "sourceType": "article_1770384510650",
+      "sourceIndex": 14,
+      "createdAt": 1770384510650
     }
   ],
-  "lastModified": 1770343766620
+  "lastModified": 1770384511099
 }

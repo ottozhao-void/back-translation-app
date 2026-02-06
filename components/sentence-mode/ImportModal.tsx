@@ -10,6 +10,13 @@ import {
   addSentencesBatch,
 } from '../../utils/sentenceLoader';
 import { SentencePair } from '../../types';
+import { AlignmentEditor } from './AlignmentEditor';
+import { AlignmentPair } from '../../utils/alignmentHelpers';
+import {
+  segmentText,
+  segmentAndAlign,
+  getConfig,
+} from '../../services/llmService';
 
 interface ImportModalProps {
   onClose: () => void;
@@ -28,16 +35,45 @@ const TABS: TabConfig[] = [
   { id: 'article', label: 'Article', description: 'Import from file or text' },
 ];
 
+// Step states for paragraph/article mode
+type ImportStep = 'input' | 'loading' | 'align' | 'importing';
+
+// Segmentation mode for LLM
+type SegmentationMode = 'independent' | 'semantic';
+
 export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSuccess }) => {
   const [activeTab, setActiveTab] = useState<ImportMode>('batch');
   const [enText, setEnText] = useState('');
   const [zhText, setZhText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
   const fileInputEnRef = useRef<HTMLInputElement>(null);
   const fileInputZhRef = useRef<HTMLInputElement>(null);
 
-  // Parse text based on active mode
+  // Multi-step state for paragraph/article modes
+  const [step, setStep] = useState<ImportStep>('input');
+  const [segmentationMode, setSegmentationMode] = useState<SegmentationMode>('independent');
+  const [alignmentPairs, setAlignmentPairs] = useState<AlignmentPair[]>([]);
+  const [usedFallback, setUsedFallback] = useState(false);
+  const [llmAvailable, setLlmAvailable] = useState<boolean | null>(null);
+
+  // Check if LLM is configured on mount
+  React.useEffect(() => {
+    checkLlmAvailable();
+  }, []);
+
+  const checkLlmAvailable = async () => {
+    const result = await getConfig();
+    if (result.success && result.config) {
+      const hasProvider = result.config.providers.some((p) => p.isEnabled);
+      const hasDefault = result.config.defaultProvider && result.config.defaultModel;
+      setLlmAvailable(hasProvider && !!hasDefault);
+    } else {
+      setLlmAvailable(false);
+    }
+  };
+
+  // Parse text based on active mode (for batch mode only now)
   const parseResult = useMemo(() => {
     if (!enText.trim() && !zhText.trim()) {
       return { enItems: [], zhItems: [], isValid: false };
@@ -48,11 +84,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
 
     if (activeTab === 'batch') {
       // Line by line - preserve alignment by NOT filtering empty lines
-      // This ensures line N in English matches line N in Chinese
       const rawEn = enText.split('\n').map(l => l.trim());
       const rawZh = zhText.split('\n').map(l => l.trim());
 
-      // Take max length to prevent data loss
       const maxLength = Math.max(rawEn.length, rawZh.length);
       enItems = [];
       zhItems = [];
@@ -60,14 +94,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
       for (let i = 0; i < maxLength; i++) {
         const en = rawEn[i] || '';
         const zh = rawZh[i] || '';
-        // Only include pairs where at least one side has content
         if (en || zh) {
           enItems.push(en);
           zhItems.push(zh);
         }
       }
     } else {
-      // Paragraph/Article - use sentence splitter
+      // For paragraph/article, use simple regex for preview count
       enItems = splitIntoSentences(enText);
       zhItems = splitIntoSentences(zhText);
     }
@@ -91,30 +124,121 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
       }
     };
     reader.readAsText(file);
-
-    // Reset input value so same file can be selected again
     e.target.value = '';
   };
 
-  const handleImport = async () => {
-    if (!parseResult.isValid) return;
+  // Handle "Next" button for paragraph/article modes - triggers LLM segmentation
+  const handleNext = async () => {
+    if (!enText.trim() || !zhText.trim()) return;
 
-    setIsImporting(true);
+    setStep('loading');
     setToast(null);
+    setUsedFallback(false);
 
     try {
-      let newSentences: SentencePair[];
+      let pairs: AlignmentPair[];
 
-      switch (activeTab) {
-        case 'batch':
-          newSentences = createBatchSentences(parseResult.enItems, parseResult.zhItems);
-          break;
-        case 'paragraph':
-          newSentences = createParagraphSentences(parseResult.enItems, parseResult.zhItems);
-          break;
-        case 'article':
-          newSentences = createArticleSentences(parseResult.enItems, parseResult.zhItems);
-          break;
+      if (segmentationMode === 'semantic' && llmAvailable) {
+        // Use semantic alignment (single LLM call for both texts)
+        const result = await segmentAndAlign(enText, zhText);
+        pairs = result.pairs;
+        if (result.usedFallback) {
+          setUsedFallback(true);
+          setToast({
+            message: 'LLM unavailable, using simple segmentation',
+            type: 'warning',
+          });
+        }
+      } else {
+        // Independent segmentation
+        if (llmAvailable) {
+          // Use LLM for each language
+          const [enResult, zhResult] = await Promise.all([
+            segmentText(enText, 'en'),
+            segmentText(zhText, 'zh'),
+          ]);
+
+          const enSegments = enResult.segments;
+          const zhSegments = zhResult.segments;
+
+          if (enResult.usedFallback || zhResult.usedFallback) {
+            setUsedFallback(true);
+            setToast({
+              message: 'LLM unavailable for some text, using simple segmentation',
+              type: 'warning',
+            });
+          }
+
+          // Build pairs (may have different lengths)
+          const maxLen = Math.max(enSegments.length, zhSegments.length);
+          pairs = [];
+          for (let i = 0; i < maxLen; i++) {
+            pairs.push({
+              en: enSegments[i] || '',
+              zh: zhSegments[i] || '',
+            });
+          }
+        } else {
+          // No LLM available, use regex fallback
+          const enSegments = splitIntoSentences(enText);
+          const zhSegments = splitIntoSentences(zhText);
+          setUsedFallback(true);
+          setToast({
+            message: 'No LLM configured, using simple segmentation',
+            type: 'warning',
+          });
+
+          const maxLen = Math.max(enSegments.length, zhSegments.length);
+          pairs = [];
+          for (let i = 0; i < maxLen; i++) {
+            pairs.push({
+              en: enSegments[i] || '',
+              zh: zhSegments[i] || '',
+            });
+          }
+        }
+      }
+
+      setAlignmentPairs(pairs);
+      setStep('align');
+    } catch (error) {
+      console.error('Segmentation error:', error);
+      // Fallback to regex
+      const enSegments = splitIntoSentences(enText);
+      const zhSegments = splitIntoSentences(zhText);
+      setUsedFallback(true);
+
+      const maxLen = Math.max(enSegments.length, zhSegments.length);
+      const pairs: AlignmentPair[] = [];
+      for (let i = 0; i < maxLen; i++) {
+        pairs.push({
+          en: enSegments[i] || '',
+          zh: zhSegments[i] || '',
+        });
+      }
+
+      setAlignmentPairs(pairs);
+      setToast({
+        message: 'Error occurred, using simple segmentation',
+        type: 'warning',
+      });
+      setStep('align');
+    }
+  };
+
+  // Handle alignment editor save
+  const handleAlignmentSave = async (pairs: AlignmentPair[]) => {
+    setStep('importing');
+
+    try {
+      const enItems = pairs.map((p) => p.en);
+      const zhItems = pairs.map((p) => p.zh);
+
+      let newSentences: SentencePair[];
+      if (activeTab === 'paragraph') {
+        newSentences = createParagraphSentences(enItems, zhItems);
+      } else {
+        newSentences = createArticleSentences(enItems, zhItems);
       }
 
       const result: ImportResult = await addSentencesBatch(newSentences);
@@ -122,7 +246,39 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
       if (result.success) {
         setToast({ message: `Successfully imported ${result.count} sentences`, type: 'success' });
         onImportSuccess(newSentences);
-        // Close modal after a short delay
+        setTimeout(() => {
+          onClose();
+        }, 1500);
+      } else {
+        setToast({ message: result.error || 'Import failed', type: 'error' });
+        setStep('align');
+      }
+    } catch (error) {
+      setToast({ message: 'An error occurred during import', type: 'error' });
+      setStep('align');
+    }
+  };
+
+  // Handle alignment editor cancel - go back to input
+  const handleAlignmentCancel = () => {
+    setStep('input');
+    setAlignmentPairs([]);
+  };
+
+  // Batch mode direct import
+  const handleImport = async () => {
+    if (!parseResult.isValid) return;
+
+    setIsImporting(true);
+    setToast(null);
+
+    try {
+      const newSentences = createBatchSentences(parseResult.enItems, parseResult.zhItems);
+      const result: ImportResult = await addSentencesBatch(newSentences);
+
+      if (result.success) {
+        setToast({ message: `Successfully imported ${result.count} sentences`, type: 'success' });
+        onImportSuccess(newSentences);
         setTimeout(() => {
           onClose();
         }, 1500);
@@ -139,6 +295,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
   const handleClear = () => {
     setEnText('');
     setZhText('');
+    setStep('input');
+    setAlignmentPairs([]);
+    setToast(null);
+  };
+
+  // Reset step when changing tabs
+  const handleTabChange = (tab: ImportMode) => {
+    setActiveTab(tab);
+    setStep('input');
+    setAlignmentPairs([]);
+    setToast(null);
   };
 
   // Validation status display
@@ -153,21 +320,68 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
       );
     }
 
-    if (isValid) {
+    if (activeTab === 'batch') {
+      if (isValid) {
+        return (
+          <div className="text-sm text-emerald-400">
+            Ready to import {enItems.length} sentence pairs
+          </div>
+        );
+      }
       return (
-        <div className="text-sm text-emerald-400">
-          Ready to import {enItems.length} sentence pairs
+        <div className="text-sm text-red-400">
+          Mismatch: English ({enItems.length}) vs Chinese ({zhItems.length})
         </div>
       );
     }
 
+    // For paragraph/article modes
     return (
-      <div className="text-sm text-red-400">
-        Mismatch: English ({enItems.length}) vs Chinese ({zhItems.length})
+      <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+        ~{enItems.length} EN / ~{zhItems.length} ZH sentences detected
       </div>
     );
   };
 
+  // If in alignment step, show the AlignmentEditor
+  if (step === 'align' || step === 'importing') {
+    return (
+      <AlignmentEditor
+        initialPairs={alignmentPairs}
+        onSave={handleAlignmentSave}
+        onCancel={handleAlignmentCancel}
+        title={usedFallback ? 'Align Sentences (Simple Mode)' : 'Align Sentences'}
+      />
+    );
+  }
+
+  // Loading state
+  if (step === 'loading') {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0 backdrop-blur-sm transition-opacity"
+          style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
+        />
+        <div
+          className="relative glass-panel rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4"
+          style={{ backgroundColor: 'var(--bg-main)' }}
+        >
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-[var(--text-main)] border-t-transparent" />
+          <div className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>
+            {llmAvailable ? 'Segmenting with AI...' : 'Segmenting...'}
+          </div>
+          <div className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            {segmentationMode === 'semantic'
+              ? 'Analyzing semantic alignment'
+              : 'Splitting into sentences'}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Input step
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div
@@ -201,7 +415,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
           {TABS.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabChange(tab.id)}
               className={`flex-1 py-3 px-4 text-sm font-medium transition-all relative ${
                 activeTab === tab.id
                   ? 'text-[var(--text-main)]'
@@ -262,6 +476,39 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
             </div>
           )}
 
+          {/* Segmentation Mode Selector (Paragraph/Article only, when LLM available) */}
+          {(activeTab === 'paragraph' || activeTab === 'article') && llmAvailable && (
+            <div className="mb-4 p-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-hover)]/30">
+              <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+                Segmentation Mode
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setSegmentationMode('independent')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm transition-all ${
+                    segmentationMode === 'independent'
+                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--text-main)]'
+                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] border border-transparent'
+                  }`}
+                >
+                  <div className="font-medium">Independent</div>
+                  <div className="text-xs opacity-70 mt-0.5">Split each language separately</div>
+                </button>
+                <button
+                  onClick={() => setSegmentationMode('semantic')}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm transition-all ${
+                    segmentationMode === 'semantic'
+                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--text-main)]'
+                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] border border-transparent'
+                  }`}
+                >
+                  <div className="font-medium">Semantic Align</div>
+                  <div className="text-xs opacity-70 mt-0.5">AI aligns meaning across languages</div>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Dual Input Area */}
           <div className="flex gap-4 h-80">
             {/* English Input */}
@@ -314,8 +561,14 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
           {/* Mode hint */}
           <div className="mt-3 text-xs" style={{ color: 'var(--text-secondary)' }}>
             {activeTab === 'batch' && 'Each line will be treated as a separate sentence pair.'}
-            {activeTab === 'paragraph' && 'Text will be automatically split into sentences.'}
-            {activeTab === 'article' && 'Upload files or paste text. Text will be automatically split into sentences.'}
+            {activeTab === 'paragraph' &&
+              (llmAvailable
+                ? 'Text will be split using AI. You can review and adjust alignment.'
+                : 'Text will be automatically split into sentences.')}
+            {activeTab === 'article' &&
+              (llmAvailable
+                ? 'Upload files or paste text. AI will segment and you can review alignment.'
+                : 'Upload files or paste text. Text will be automatically split into sentences.')}
           </div>
         </div>
 
@@ -325,7 +578,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
             {renderValidationStatus()}
             {toast && (
               <div
-                className={`text-sm ${toast.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}
+                className={`text-sm ${
+                  toast.type === 'success'
+                    ? 'text-emerald-400'
+                    : toast.type === 'warning'
+                    ? 'text-amber-400'
+                    : 'text-red-400'
+                }`}
               >
                 {toast.message}
               </div>
@@ -346,21 +605,41 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
             >
               Cancel
             </button>
-            <button
-              onClick={handleImport}
-              disabled={!parseResult.isValid || isImporting}
-              className={`px-6 py-2 rounded-lg text-sm font-medium transition-all shadow-lg ${
-                parseResult.isValid && !isImporting
-                  ? 'hover:shadow-xl transform hover:-translate-y-0.5'
-                  : 'opacity-50 cursor-not-allowed'
-              }`}
-              style={{
-                backgroundColor: parseResult.isValid ? 'var(--text-main)' : 'var(--surface-hover)',
-                color: parseResult.isValid ? 'var(--bg-main)' : 'var(--text-secondary)',
-              }}
-            >
-              {isImporting ? 'Importing...' : 'Import'}
-            </button>
+
+            {/* Different button based on mode */}
+            {activeTab === 'batch' ? (
+              <button
+                onClick={handleImport}
+                disabled={!parseResult.isValid || isImporting}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all shadow-lg ${
+                  parseResult.isValid && !isImporting
+                    ? 'hover:shadow-xl transform hover:-translate-y-0.5'
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                style={{
+                  backgroundColor: parseResult.isValid ? 'var(--text-main)' : 'var(--surface-hover)',
+                  color: parseResult.isValid ? 'var(--bg-main)' : 'var(--text-secondary)',
+                }}
+              >
+                {isImporting ? 'Importing...' : 'Import'}
+              </button>
+            ) : (
+              <button
+                onClick={handleNext}
+                disabled={!enText.trim() || !zhText.trim()}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition-all shadow-lg ${
+                  enText.trim() && zhText.trim()
+                    ? 'hover:shadow-xl transform hover:-translate-y-0.5'
+                    : 'opacity-50 cursor-not-allowed'
+                }`}
+                style={{
+                  backgroundColor: enText.trim() && zhText.trim() ? 'var(--text-main)' : 'var(--surface-hover)',
+                  color: enText.trim() && zhText.trim() ? 'var(--bg-main)' : 'var(--text-secondary)',
+                }}
+              >
+                Next →
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -41,6 +41,7 @@ export interface AppSettings {
   llmThreshold: number;
   hotkeys: { [commandId: string]: string };
   practiceGranularity: 'sentence' | 'paragraph';  // Default: 'sentence'
+  llm?: LLMSettings;  // LLM platform settings (optional for backward compatibility)
 }
 
 // --- Storage Keys ---
@@ -93,3 +94,127 @@ export type SentenceFilterType =
   | { type: 'time'; order: 'asc' | 'desc' }  // Sort by time
   | { type: 'random'; count?: number }       // Random selection
   | { type: 'tag'; tag: string };            // Filter by tag (reserved)
+
+// === LLM Platform Types ===
+
+/**
+ * LLM 提供商配置
+ * Configuration for an LLM provider (OpenAI, Gemini, Ollama, etc.)
+ */
+export interface LLMProviderConfig {
+  id: string;                    // Unique identifier, e.g., 'openai', 'gemini', 'custom-1'
+  name: string;                  // Display name, e.g., 'OpenAI', 'Google Gemini'
+  baseUrl: string;               // API Base URL
+  apiKey: string;                // API Key (stored securely)
+  isEnabled: boolean;            // Whether this provider is enabled
+  models?: string[];             // Cached list of available models
+  lastFetched?: number;          // Timestamp of last model list fetch
+}
+
+/**
+ * 模型参数配置
+ * User-adjustable parameters for LLM API calls
+ */
+export interface LLMModelParams {
+  temperature: number;           // Temperature (0-2), controls randomness, default 0
+  topP: number;                  // Top-P sampling (0-1), default 1
+  maxTokens?: number;            // Maximum tokens to generate, undefined = no limit
+  frequencyPenalty: number;      // Frequency penalty (-2 to 2), default 0
+  presencePenalty: number;       // Presence penalty (-2 to 2), default 0
+  seed?: number;                 // Random seed for reproducible results
+}
+
+/**
+ * 默认模型参数
+ * Default parameters optimized for deterministic tasks like segmentation
+ */
+export const DEFAULT_MODEL_PARAMS: LLMModelParams = {
+  temperature: 0,                // Deterministic output for segmentation tasks
+  topP: 1,
+  frequencyPenalty: 0,
+  presencePenalty: 0,
+};
+
+/**
+ * LLM 模型信息
+ * Information about an available model
+ */
+export interface LLMModel {
+  id: string;                    // Model ID, e.g., 'gpt-4', 'gemini-2.0-flash'
+  name: string;                  // Display name
+  providerId: string;            // ID of the provider this model belongs to
+  contextLength?: number;        // Context window size limit
+  supportsJson?: boolean;        // Whether the model supports JSON mode
+}
+
+/**
+ * LLM 任务类型
+ * Types of tasks that can be executed via the LLM platform
+ */
+export type LLMTaskType =
+  | 'segment'           // Split text into sentences (single language)
+  | 'segment-align'     // Semantically align and split EN+ZH texts together
+  | 'translate'         // Translate text
+  | 'score'             // Score user translation quality
+  | 'custom';           // Custom task with user-provided prompt
+
+/**
+ * LLM 任务请求
+ * Request structure for executing an LLM task
+ */
+export interface LLMTaskRequest {
+  taskType: LLMTaskType;
+  modelId: string;               // Model to use
+  providerId: string;            // Provider to use
+  params: Record<string, unknown>; // Task-specific parameters
+  modelParams?: Partial<LLMModelParams>;  // Optional model parameter overrides
+}
+
+/**
+ * LLM 任务响应
+ * Response structure from an LLM task execution
+ */
+export interface LLMTaskResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+}
+
+/**
+ * 任务模型配置
+ * Configuration for a specific task's model selection
+ */
+export interface TaskModelConfig {
+  providerId: string;
+  modelId: string;
+  params?: Partial<LLMModelParams>;  // Task-level parameter overrides
+}
+
+/**
+ * LLM 设置
+ * Complete LLM platform settings
+ */
+export interface LLMSettings {
+  providers: LLMProviderConfig[];
+  defaultProvider?: string;      // Default provider ID
+  defaultModel?: string;         // Default model ID
+  defaultParams: LLMModelParams; // Global default model parameters
+  taskModels: {                  // Per-task model configuration
+    [K in LLMTaskType]?: TaskModelConfig;
+  };
+}
+
+/**
+ * 默认 LLM 设置
+ * Default settings for new installations
+ */
+export const DEFAULT_LLM_SETTINGS: LLMSettings = {
+  providers: [],
+  defaultParams: DEFAULT_MODEL_PARAMS,
+  taskModels: {},
+};

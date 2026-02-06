@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { AppSettings } from '../types';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { version } from '../package.json';
-import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon } from './Icons';
+import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon, SparklesIcon } from './Icons';
+import { AIModelsTab } from './settings/AIModelsTab';
 
 interface SettingsModalProps {
     settings: AppSettings;
@@ -82,6 +83,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     const sidebarItems = [
         { name: 'General', icon: SystemIcon },
         { name: 'Hotkeys', icon: KeyboardIcon },
+        { name: 'AI Models', icon: SparklesIcon },
     ];
 
     return (
@@ -265,7 +267,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                             </div>
                         )}
 
-                        {activeTab !== 'General' && activeTab !== 'Hotkeys' && (
+                        {activeTab === 'AI Models' && (
+                            <AIModelsTab />
+                        )}
+
+                        {activeTab !== 'General' && activeTab !== 'Hotkeys' && activeTab !== 'AI Models' && (
                             <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)]">
                                 <div className="mb-4 opacity-50 scale-150">
                                     {(() => {

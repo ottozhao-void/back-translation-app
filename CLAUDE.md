@@ -55,18 +55,30 @@ index.tsx           # App root, state management, view routing
 │   ├── Toast.tsx           # Toast notifications with undo support
 │   ├── KeyboardHints.tsx   # Keyboard shortcut overlay (? key)
 │   ├── Skeleton.tsx        # Loading placeholders
+│   ├── settings/           # Settings sub-components
+│   │   ├── AIModelsTab.tsx       # LLM provider configuration
+│   │   └── ProviderEditModal.tsx # Provider add/edit dialog
 │   ├── sentence-mode/      # SentenceMode sub-components
 │   │   ├── SentenceSidebar.tsx
 │   │   ├── SentencePracticeArea.tsx
-│   │   └── ImportModal.tsx
+│   │   ├── ImportModal.tsx       # Import with LLM segmentation
+│   │   └── AlignmentEditor.tsx   # Sentence alignment editor
 │   └── ...
 ├── utils/
 │   ├── articleLoader.ts    # Article parsing, serialization, API calls
 │   ├── sentenceLoader.ts   # Sentence CRUD operations
-│   └── textUtils.ts
+│   ├── textUtils.ts
+│   └── alignmentHelpers.ts # Sentence alignment utilities
 ├── services/
-│   └── geminiService.ts    # Google GenAI TTS integration
-├── types.ts        # TypeScript interfaces (Article, Paragraph, SentencePair, UserTranslation)
+│   ├── geminiService.ts    # Google GenAI TTS integration
+│   └── llmService.ts       # LLM platform frontend service
+├── server/
+│   └── llm/                # LLM backend services
+│       ├── index.ts        # API route handlers
+│       ├── executor.ts     # OpenAI-compatible API executor
+│       ├── prompts.ts      # Task prompt registry
+│       └── providers.ts    # Provider config management
+├── types.ts        # TypeScript interfaces (Article, Paragraph, SentencePair, LLM types)
 └── constants.tsx   # Hotkey definitions, fallback article list
 ```
 
@@ -119,6 +131,60 @@ SentencePair {
 
 ### Hotkey System
 Hotkeys are configurable via Settings. Defaults defined in `constants.tsx` (`AVAILABLE_COMMANDS`). The `PracticeSession` component handles keyboard events with `matchesHotkey()` helper.
+
+### LLM Platform Architecture
+
+The app includes a generic LLM platform for AI-powered features like intelligent sentence segmentation.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Frontend                                  │
+│  ┌─────────────────┐  ┌─────────────────────────────────┐   │
+│  │ Settings UI     │  │ ImportModal                     │   │
+│  │ (AIModelsTab)   │  │ (LLM segmentation + alignment)  │   │
+│  └────────┬────────┘  └────────────────┬────────────────┘   │
+│           │                            │                     │
+│           ▼                            ▼                     │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              services/llmService.ts                  │    │
+│  │  - segmentText(), segmentAndAlign()                  │    │
+│  │  - Automatic fallback to regex when LLM unavailable  │    │
+│  └──────────────────────────┬──────────────────────────┘    │
+├─────────────────────────────┼───────────────────────────────┤
+│                             ▼                                │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              server/llm/ (Backend)                   │    │
+│  │  - index.ts: API route handlers                      │    │
+│  │  - executor.ts: OpenAI-compatible API calls          │    │
+│  │  - prompts.ts: Task-specific prompt registry         │    │
+│  │  - providers.ts: Provider config management          │    │
+│  └──────────────────────────┬──────────────────────────┘    │
+│                             ▼                                │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │         LLM Provider (OpenAI-Compatible API)         │    │
+│  │  OpenAI, Gemini, Ollama, OpenRouter, etc.            │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**LLM API Endpoints:**
+- `GET /api/llm/config` - Get LLM settings (API keys masked)
+- `POST /api/llm/config` - Save LLM settings
+- `POST /api/llm/provider` - Add/update a provider
+- `DELETE /api/llm/provider?id=` - Delete a provider
+- `POST /api/llm/models` - Fetch available models from provider
+- `POST /api/llm/execute` - Execute an LLM task
+
+**LLM Task Types:**
+- `segment` - Split text into sentences (single language)
+- `segment-align` - Semantically align bilingual text
+- `translate` - Translate text (reserved)
+- `score` - Score translation quality (reserved)
+
+**Configuration:**
+- Provider configs stored in `data/llm-config.json` (gitignored)
+- Settings UI: Settings → AI Models tab
+- Supports any OpenAI-compatible API (OpenAI, Gemini, Ollama, etc.)
 
 ## Key Implementation Details
 

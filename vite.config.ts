@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { handleLLMRequest } from './server/llm/index';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -37,7 +38,13 @@ function setupMiddleware(middlewares: any) {
 
         try {
           const url = new URL(req.url || '', `http://${req.headers.host}`);
-          
+
+          // === LLM API Routes ===
+          if (url.pathname.startsWith('/api/llm/')) {
+            const handled = await handleLLMRequest(req, res);
+            if (handled) return;
+          }
+
           // 1. Handle API requests (POST/DELETE)
           if (url.pathname === '/api/articles/rename' && req.method === 'POST') {
             const chunks: Buffer[] = [];
