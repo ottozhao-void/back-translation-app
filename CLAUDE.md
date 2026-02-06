@@ -24,6 +24,12 @@ node server.js   # Run production server (after build)
 Both servers implement identical API endpoints - changes to one must be mirrored in the other.
 
 ### API Endpoints (implemented in both vite.config.ts and server.js)
+
+**Sentences API:**
+- `GET /api/sentences` - Load all sentence pairs
+- `POST /api/sentences` - Save all sentence pairs (full replacement)
+
+**Articles API (legacy):**
 - `GET /api/articles` - List article files
 - `POST /api/articles` - Save article (filename, content)
 - `DELETE /api/articles?filename=` - Delete article
@@ -37,19 +43,30 @@ Articles are stored as JSON in `public/articles/`. The server writes to both `pu
 ```
 index.tsx           # App root, state management, view routing
 ├── views/
-│   ├── ArticleList.tsx     # Home view - article grid
+│   ├── SentenceMode.tsx    # Home view - sentence-based practice
+│   ├── ArticleList.tsx     # Legacy article grid (currently unused)
 │   ├── ModeSelector.tsx    # EN↔ZH mode selection
 │   └── PracticeSession.tsx # Main practice interface with hotkeys
 ├── components/
 │   ├── SettingsModal.tsx   # App settings (auto-save, hotkeys)
 │   ├── SentenceCompareModal.tsx  # Diff comparison view
+│   ├── ConfirmModal.tsx    # Styled confirmation dialogs
+│   ├── InputModal.tsx      # Styled input prompts
+│   ├── Toast.tsx           # Toast notifications with undo support
+│   ├── KeyboardHints.tsx   # Keyboard shortcut overlay (? key)
+│   ├── Skeleton.tsx        # Loading placeholders
+│   ├── sentence-mode/      # SentenceMode sub-components
+│   │   ├── SentenceSidebar.tsx
+│   │   ├── SentencePracticeArea.tsx
+│   │   └── ImportModal.tsx
 │   └── ...
 ├── utils/
 │   ├── articleLoader.ts    # Article parsing, serialization, API calls
+│   ├── sentenceLoader.ts   # Sentence CRUD operations
 │   └── textUtils.ts
 ├── services/
 │   └── geminiService.ts    # Google GenAI TTS integration
-├── types.ts        # TypeScript interfaces (Article, Paragraph, UserTranslation)
+├── types.ts        # TypeScript interfaces (Article, Paragraph, SentencePair, UserTranslation)
 └── constants.tsx   # Hotkey definitions, fallback article list
 ```
 
@@ -81,6 +98,25 @@ UserTranslation {
 }
 ```
 
+### Sentence Mode Architecture (Current)
+
+The app uses a "Sentence Base" model where all translation pairs are stored in a flat list and grouped by source.
+
+```typescript
+SentencePair {
+  id: string;
+  en: string;
+  zh: string;
+  sourceType: string;      // e.g., "article-name.json" or "manual"
+  userTranslationZh?: UserTranslation;
+  userTranslationEn?: UserTranslation;
+}
+```
+
+- Data stored in `public/sentences.json`
+- Auto-migrates from Articles if sentence database is empty
+- Sidebar groups sentences by `sourceType`
+
 ### Hotkey System
 Hotkeys are configurable via Settings. Defaults defined in `constants.tsx` (`AVAILABLE_COMMANDS`). The `PracticeSession` component handles keyboard events with `matchesHotkey()` helper.
 
@@ -90,3 +126,11 @@ Hotkeys are configurable via Settings. Defaults defined in `constants.tsx` (`AVA
 - Path alias `@/` maps to project root (configured in both `tsconfig.json` and `vite.config.ts`)
 - Environment variable `GEMINI_API_KEY` enables TTS via Google GenAI SDK
 - Auto-save creates 'draft' type translations; submitting creates 'diff' or 'llm' type
+
+## Gotchas
+
+- **CSS Variables**: Using undefined CSS variables (e.g., `var(--accent-blue)`) fails silently. Always verify variables exist in `index.html` `:root`.
+- **Toast z-index**: Toast container uses `z-[200]`. Action buttons need `pointerEvents: 'auto'` and `e.stopPropagation()` to be clickable.
+- **Soft Delete Pattern**: Delete operations use 5-second timeout + undo. Store pending deletes in a ref, not state, to avoid re-render issues.
+- **Port conflicts**: Vite dev server auto-increments port if 3000 is in use. Check terminal output for actual port.
+- **ArticleList unused**: Despite being in codebase, `ArticleList.tsx` is not rendered. `SentenceMode.tsx` is the actual home view.

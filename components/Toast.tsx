@@ -91,9 +91,12 @@ const ToastItem: React.FC<ToastItemProps> = ({ toast, onDismiss }) => {
             </span>
             {toast.action && (
                 <button
-                    onClick={handleAction}
-                    className="ml-2 px-3 py-1 text-xs font-medium rounded-full transition-colors hover:bg-[var(--surface-hover)]"
-                    style={{ color: 'var(--text-main)', border: '1px solid var(--glass-border)' }}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleAction();
+                    }}
+                    className="ml-2 px-3 py-1 text-xs font-medium rounded-full transition-colors bg-blue-500 hover:bg-blue-600 text-white cursor-pointer"
+                    style={{ pointerEvents: 'auto' }}
                 >
                     {toast.action.label}
                 </button>

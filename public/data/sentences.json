@@ -1121,15 +1121,6 @@
       "createdAt": 1770284174484
     },
     {
-      "id": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json_fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p10_s0",
-      "en": "### 5.",
-      "zh": "### 5.",
-      "sourceType": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json",
-      "sourceIndex": 0,
-      "paragraphId": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p10",
-      "createdAt": 1770284174484
-    },
-    {
       "id": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json_fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p10_s1",
       "en": "Use Your Gifts to Help Others",
       "zh": "用天赋帮助他人",
@@ -1162,15 +1153,6 @@
       "zh": "他以一句日本谚语作结，完美诠释了坚韧精神：**“七次跌倒，八次起身。",
       "sourceType": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json",
       "sourceIndex": 2,
-      "paragraphId": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p11",
-      "createdAt": 1770284174484
-    },
-    {
-      "id": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json_fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p11_s3",
-      "en": "\"**",
-      "zh": "”**",
-      "sourceType": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json",
-      "sourceIndex": 3,
       "paragraphId": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p11",
       "createdAt": 1770284174484
     },
@@ -1389,5 +1371,5 @@
       "createdAt": 1770338833593
     }
   ],
-  "lastModified": 1770339733369
+  "lastModified": 1770343766620
 }

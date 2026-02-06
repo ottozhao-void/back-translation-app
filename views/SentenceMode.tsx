@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article } from '../types';
 import { fetchSentences, saveSentences } from '../utils/sentenceLoader';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
@@ -7,6 +7,9 @@ import { SentencePracticeArea } from '../components/sentence-mode/SentencePracti
 import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { SidebarCollapseIcon, SidebarExpandIcon } from '../components/Icons';
 import { AVAILABLE_COMMANDS } from '../constants';
+import { ToastContainer, useToast } from '../components/Toast';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { LoadingSpinner } from '../components/Skeleton';
 
 // Helper to match hotkey
 const matchesHotkey = (e: KeyboardEvent, hotkeyString: string): boolean => {
@@ -44,6 +47,11 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  // Toast and soft delete states
+  const { toasts, dismissToast, showSuccess, showError } = useToast();
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<SentencePair | null>(null);
+  const pendingDeletesRef = useRef<Map<string, { sentence: SentencePair; timeoutId: NodeJS.Timeout }>>(new Map());
 
   // Toggle sidebar collapse
   const toggleSidebar = useCallback(() => {
@@ -136,31 +144,68 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     setSentences(prev => [...prev, ...newSentences]);
   };
 
-  // Handle deleting a sentence
-  const handleDeleteSentence = (id: string) => {
-    setSentences(prev => {
-      const updated = prev.filter(s => s.id !== id);
-      saveSentences(updated);
-      return updated;
-    });
+  // Handle deleting a sentence - with soft delete and undo
+  const handleDeleteSentence = useCallback((id: string) => {
+    const sentenceToDelete = sentences.find(s => s.id === id);
+    if (!sentenceToDelete) return;
+
+    // Create timeout for permanent deletion
+    const timeoutId = setTimeout(() => {
+      setSentences(prev => {
+        const updated = prev.filter(s => s.id !== id);
+        saveSentences(updated);
+        return updated;
+      });
+      pendingDeletesRef.current.delete(id);
+    }, 5000);
+
+    // Store pending delete
+    pendingDeletesRef.current.set(id, { sentence: sentenceToDelete, timeoutId });
+
+    // Optimistically remove from UI
+    setSentences(prev => prev.filter(s => s.id !== id));
+
     // Clear selection if deleted sentence was selected
     if (selectedId === id) {
       setSelectedId(null);
     }
-  };
+
+    // Show toast with undo action
+    const previewText = sentenceToDelete.en.slice(0, 30) + (sentenceToDelete.en.length > 30 ? '...' : '');
+    showSuccess(`"${previewText}" deleted`, {
+      label: 'Undo',
+      onClick: () => {
+        // Cancel the deletion
+        const pending = pendingDeletesRef.current.get(id);
+        if (pending) {
+          clearTimeout(pending.timeoutId);
+          pendingDeletesRef.current.delete(id);
+          // Restore the sentence
+          setSentences(prev => [...prev, pending.sentence]);
+          showSuccess('Sentence restored');
+        }
+      }
+    });
+  }, [sentences, selectedId, showSuccess]);
+
+  // Cleanup pending deletes on unmount
+  useEffect(() => {
+    return () => {
+      pendingDeletesRef.current.forEach(({ timeoutId }) => {
+        clearTimeout(timeoutId);
+      });
+    };
+  }, []);
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-xl font-light animate-pulse" style={{ color: 'var(--text-secondary)' }}>
-          Loading sentences...
-        </div>
-      </div>
-    );
+    return <LoadingSpinner text="Loading sentences..." />;
   }
 
   return (
     <div className="flex h-full">
+      {/* Toast Container */}
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
+
       {/* Sidebar */}
       <SentenceSidebar
         sentences={sentences}
@@ -178,8 +223,8 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         className="flex-shrink-0 w-6 flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors border-r border-[var(--glass-border)] group"
         title={sidebarCollapsed ? 'Expand Sidebar (⌘B)' : 'Collapse Sidebar (⌘B)'}
         style={{ backgroundColor: 'var(--surface-hover)', opacity: 0.5 }}
-        onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = '0.5'}
+        onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.opacity = '1'}
+        onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.opacity = '0.5'}
       >
         <div style={{ color: 'var(--text-secondary)' }}>
           {sidebarCollapsed ? <SidebarExpandIcon /> : <SidebarCollapseIcon />}
