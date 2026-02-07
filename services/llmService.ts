@@ -340,6 +340,83 @@ export async function segmentBothTexts(
   return { en, zh };
 }
 
+// ============ Translation ============
+
+export interface TranslationResult {
+  success: boolean;
+  translation: string;
+  error?: string;
+}
+
+/**
+ * Translate text using LLM
+ * @param text - Text to translate
+ * @param from - Source language ('en' or 'zh')
+ * @param to - Target language ('en' or 'zh')
+ */
+export async function translateText(
+  text: string,
+  from: 'en' | 'zh',
+  to: 'en' | 'zh',
+  providerId?: string,
+  modelId?: string
+): Promise<TranslationResult> {
+  if (!text.trim()) {
+    return { success: true, translation: '' };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.translate;
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If no provider configured, return error
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      translation: '',
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const fromLang = from === 'en' ? 'English' : 'Chinese';
+    const toLang = to === 'en' ? 'English' : 'Chinese';
+
+    const result = await executeTask<{ translation: string }>(
+      'translate',
+      providerId,
+      modelId,
+      { text, from: fromLang, to: toLang }
+    );
+
+    if (result.success && result.data?.translation) {
+      return {
+        success: true,
+        translation: result.data.translation,
+      };
+    } else {
+      return {
+        success: false,
+        translation: '',
+        error: result.error || 'Translation failed',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      translation: '',
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 // ============ Greeting Generation ============
 
 export interface GreetingResult {

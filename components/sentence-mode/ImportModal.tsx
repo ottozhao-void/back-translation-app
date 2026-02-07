@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useRef } from 'react';
-import { XMarkIcon, UploadIconSmall } from '../Icons';
+import React, { useState, useMemo } from 'react';
+import { XMarkIcon } from '../Icons';
 import { splitIntoSentences } from '../../utils/textUtils';
 import {
   ImportMode,
@@ -16,6 +16,7 @@ import { AlignmentPair } from '../../utils/alignmentHelpers';
 import {
   segmentText,
   segmentAndAlign,
+  translateText,
   getConfig,
 } from '../../services/llmService';
 
@@ -68,8 +69,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
   const [zhText, setZhText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
-  const fileInputEnRef = useRef<HTMLInputElement>(null);
-  const fileInputZhRef = useRef<HTMLInputElement>(null);
 
   // Multi-step state
   const [step, setStep] = useState<ImportStep>('mode-select');
@@ -77,6 +76,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
   const [alignmentPairs, setAlignmentPairs] = useState<AlignmentPair[]>([]);
   const [usedFallback, setUsedFallback] = useState(false);
   const [llmAvailable, setLlmAvailable] = useState<boolean | null>(null);
+  const [translatingEn, setTranslatingEn] = useState(false);
+  const [translatingZh, setTranslatingZh] = useState(false);
 
   // Check if LLM is configured on mount
   React.useEffect(() => {
@@ -155,23 +156,6 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
 
     return { enItems, zhItems, isValid, validationError };
   }, [enText, zhText, activeMode]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, lang: 'en' | 'zh') => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      if (lang === 'en') {
-        setEnText(text);
-      } else {
-        setZhText(text);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
 
   // Handle "Next" button for paragraph/article modes - triggers LLM segmentation
   const handleNext = async () => {
@@ -390,6 +374,50 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
     setToast(null);
   };
 
+  // Handle translation: EN -> ZH
+  const handleTranslateEnToZh = async () => {
+    if (!enText.trim() || !llmAvailable || translatingEn) return;
+
+    setTranslatingEn(true);
+    setToast(null);
+
+    try {
+      const result = await translateText(enText, 'en', 'zh');
+      if (result.success && result.translation) {
+        setZhText(result.translation);
+        setToast({ message: 'Translation completed', type: 'success' });
+      } else {
+        setToast({ message: result.error || 'Translation failed', type: 'error' });
+      }
+    } catch (error) {
+      setToast({ message: 'Translation error', type: 'error' });
+    } finally {
+      setTranslatingEn(false);
+    }
+  };
+
+  // Handle translation: ZH -> EN
+  const handleTranslateZhToEn = async () => {
+    if (!zhText.trim() || !llmAvailable || translatingZh) return;
+
+    setTranslatingZh(true);
+    setToast(null);
+
+    try {
+      const result = await translateText(zhText, 'zh', 'en');
+      if (result.success && result.translation) {
+        setEnText(result.translation);
+        setToast({ message: 'Translation completed', type: 'success' });
+      } else {
+        setToast({ message: result.error || 'Translation failed', type: 'error' });
+      }
+    } catch (error) {
+      setToast({ message: 'Translation error', type: 'error' });
+    } finally {
+      setTranslatingZh(false);
+    }
+  };
+
   // Validation status display
   const renderValidationStatus = () => {
     const { enItems, zhItems, isValid, validationError } = parseResult;
@@ -577,74 +605,37 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-          {/* File Upload (Article mode only) */}
-          {activeMode === 'article' && (
-            <div className="mb-4 flex gap-4">
-              <div className="flex-1">
-                <input
-                  ref={fileInputEnRef}
-                  type="file"
-                  accept=".txt,.md"
-                  onChange={(e) => handleFileUpload(e, 'en')}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputEnRef.current?.click()}
-                  className="w-full py-2 px-4 rounded-lg text-sm border border-dashed border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  <UploadIconSmall />
-                  <span>Upload English file</span>
-                </button>
-              </div>
-              <div className="flex-1">
-                <input
-                  ref={fileInputZhRef}
-                  type="file"
-                  accept=".txt,.md"
-                  onChange={(e) => handleFileUpload(e, 'zh')}
-                  className="hidden"
-                />
-                <button
-                  onClick={() => fileInputZhRef.current?.click()}
-                  className="w-full py-2 px-4 rounded-lg text-sm border border-dashed border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
-                  style={{ color: 'var(--text-secondary)' }}
-                >
-                  <UploadIconSmall />
-                  <span>Upload Chinese file</span>
-                </button>
-              </div>
-            </div>
-          )}
-
           {/* Segmentation Mode Selector (Paragraph/Article only, when LLM available) */}
           {(activeMode === 'paragraph' || activeMode === 'article') && llmAvailable && (
-            <div className="mb-4 p-3 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-hover)]/30">
-              <div className="text-xs font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
-                Segmentation Mode
-              </div>
-              <div className="flex gap-2">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
+                Segmentation
+              </span>
+              <div className="flex items-center gap-1 p-0.5 rounded-md bg-[var(--surface-hover)] border border-[var(--glass-border)]">
                 <button
                   onClick={() => setSegmentationMode('independent')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm transition-all ${
+                  className={`px-3 py-1 rounded text-xs font-medium transition-all ${
                     segmentationMode === 'independent'
-                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--text-main)]'
-                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] border border-transparent'
+                      ? 'bg-[var(--bg-main)] text-[var(--text-main)] shadow-sm'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                   }`}
+                  title="Split each language separately"
                 >
-                  <div className="font-medium">Independent</div>
-                  <div className="text-xs opacity-70 mt-0.5">Split each language separately</div>
+                  Independent
                 </button>
                 <button
                   onClick={() => setSegmentationMode('semantic')}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm transition-all ${
+                  className={`px-3 py-1 rounded text-xs font-medium transition-all flex items-center gap-1.5 ${
                     segmentationMode === 'semantic'
-                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--text-main)]'
-                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] border border-transparent'
+                      ? 'bg-[var(--bg-main)] text-[var(--text-main)] shadow-sm'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-main)]'
                   }`}
+                  title="AI aligns meaning across languages"
                 >
-                  <div className="font-medium">Semantic Align</div>
-                  <div className="text-xs opacity-70 mt-0.5">AI aligns meaning across languages</div>
+                  <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" />
+                  </svg>
+                  Semantic
                 </button>
               </div>
             </div>
@@ -655,9 +646,35 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
             {/* English Input */}
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                  English
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                    English
+                  </label>
+                  {llmAvailable && (
+                    <button
+                      onClick={handleTranslateZhToEn}
+                      disabled={!zhText.trim() || translatingZh}
+                      className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all border ${
+                        zhText.trim() && !translatingZh
+                          ? 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--surface-hover)] hover:border-[var(--text-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                          : 'border-transparent bg-transparent opacity-30 cursor-not-allowed'
+                      }`}
+                      title="AI translate from Chinese"
+                    >
+                      {translatingZh ? (
+                        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                          <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" />
+                        </svg>
+                      )}
+                      <span>Translate</span>
+                    </button>
+                  )}
+                </div>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {parseResult.enItems.length} {activeMode === 'sentence' ? 'lines' : 'sentences'}
                 </span>
@@ -680,9 +697,35 @@ export const ImportModal: React.FC<ImportModalProps> = ({ onClose, onImportSucce
             {/* Chinese Input */}
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
-                  中文
-                </label>
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                    中文
+                  </label>
+                  {llmAvailable && (
+                    <button
+                      onClick={handleTranslateEnToZh}
+                      disabled={!enText.trim() || translatingEn}
+                      className={`px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 transition-all border ${
+                        enText.trim() && !translatingEn
+                          ? 'border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--surface-hover)] hover:border-[var(--text-secondary)] text-[var(--text-secondary)] hover:text-[var(--text-main)]'
+                          : 'border-transparent bg-transparent opacity-30 cursor-not-allowed'
+                      }`}
+                      title="AI translate from English"
+                    >
+                      {translatingEn ? (
+                        <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10" strokeOpacity="0.25" />
+                          <path d="M12 2a10 10 0 0 1 10 10" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M12 2L13.09 8.26L18 6L14.74 10.91L21 12L14.74 13.09L18 18L13.09 15.74L12 22L10.91 15.74L6 18L9.26 13.09L3 12L9.26 10.91L6 6L10.91 8.26L12 2Z" />
+                        </svg>
+                      )}
+                      <span>Translate</span>
+                    </button>
+                  )}
+                </div>
                 <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
                   {parseResult.zhItems.length} {activeMode === 'sentence' ? 'lines' : 'sentences'}
                 </span>

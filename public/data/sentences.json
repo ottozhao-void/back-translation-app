@@ -1839,7 +1839,21 @@
       "paragraphId": "para_1770442289687_en2x",
       "order": 1,
       "createdAt": 1770442289687
+    },
+    {
+      "id": "sent_1770453705733_cy4c",
+      "en": "You delegate complex autonomous work to Claude but stay actively engaged to course-correct wrong approaches, tolerating iteration rather than providing exhaustive upfront specifications.",
+      "zh": "您将复杂的自主工作委派给 Claude，但会保持积极参与以纠正错误方法，更倾向于接受迭代，而非在前期提供详尽的规范。",
+      "sourceType": "sentence",
+      "order": -1,
+      "createdAt": 1770453705733,
+      "userTranslationZh": {
+        "type": "diff",
+        "text": "你将复杂的自动化工作分配给Claude并积极参与来纠正错误的方案，相比于预先提供详尽的细节你更能忍受迭代改进的方式。",
+        "timestamp": 1770464237271
+      },
+      "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770442289767
+  "lastModified": 1770464237943
 }
