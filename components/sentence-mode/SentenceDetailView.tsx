@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SentencePair, PracticeMode } from '../../types';
+import { SentencePair, PracticeMode, TagInfo } from '../../types';
 import { CardCarousel, CardConfig, SentenceInfoCard, StatsCard, VocabularyCard } from './cards';
 
 interface SentenceDetailViewProps {
@@ -12,6 +12,10 @@ interface SentenceDetailViewProps {
   onModeToggle: () => void;
   onUpdateSentence?: (id: string, updates: Partial<SentencePair>) => void;
   hideReferenceInDetailView?: boolean;
+  // Tag system props
+  allTags?: TagInfo[];
+  onToggleTag?: (tagId: string) => void;
+  onOpenTagPicker?: () => void;
 }
 
 /**
@@ -34,6 +38,9 @@ export const SentenceDetailView: React.FC<SentenceDetailViewProps> = ({
   onModeToggle,
   onUpdateSentence,
   hideReferenceInDetailView = true,
+  allTags = [],
+  onToggleTag,
+  onOpenTagPicker,
 }) => {
   // Current card index for carousel
   const [cardIndex, setCardIndex] = useState(0);
@@ -59,6 +66,9 @@ export const SentenceDetailView: React.FC<SentenceDetailViewProps> = ({
           onModeToggle={onModeToggle}
           onUpdateSentence={onUpdateSentence}
           hideReferenceInDetailView={hideReferenceInDetailView}
+          allTags={allTags}
+          onToggleTag={onToggleTag}
+          onOpenTagPicker={onOpenTagPicker}
         />
       ),
     },

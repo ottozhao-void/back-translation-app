@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode } from '../types';
-import { fetchSentences, saveSentences, migrateAllSentences } from '../utils/sentenceLoader';
+import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode, TagInfo, SYSTEM_TAGS } from '../types';
+import { fetchSentences, saveSentences, migrateAllSentences, patchSentence } from '../utils/sentenceLoader';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
 import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
 import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
+import { TagPickerModal } from '../components/sentence-mode/TagPickerModal';
 import { SidebarCollapseIcon, SidebarExpandIcon, HomeIcon } from '../components/Icons';
 import { HistoryModal } from '../components/HistoryModal';
 import { AVAILABLE_COMMANDS } from '../constants';
@@ -48,6 +49,92 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Tag system state
+  const [userTags, setUserTags] = useState<TagInfo[]>([]);
+  const [tagPickerSentenceId, setTagPickerSentenceId] = useState<string | null>(null);
+
+  // Fetch user tags on mount
+  useEffect(() => {
+    const loadUserTags = async () => {
+      try {
+        const response = await fetch('/api/tags');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUserTags(data.data || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user tags:', error);
+      }
+    };
+    loadUserTags();
+  }, []);
+
+  // Toggle a tag on a sentence
+  const handleToggleTag = useCallback(async (sentenceId: string, tagId: string) => {
+    const sentence = sentences.find(s => s.id === sentenceId);
+    if (!sentence) return;
+
+    const currentTags = sentence.tags || [];
+    const hasTag = currentTags.includes(tagId);
+    const newTags = hasTag
+      ? currentTags.filter(t => t !== tagId)
+      : [...currentTags, tagId];
+
+    // Optimistically update UI
+    setSentences(prev => prev.map(s =>
+      s.id === sentenceId ? { ...s, tags: newTags } : s
+    ));
+
+    // Persist via PATCH API
+    try {
+      await patchSentence(sentenceId, { tags: newTags });
+    } catch (error) {
+      console.error('Failed to update tags:', error);
+      // Revert on error
+      setSentences(prev => prev.map(s =>
+        s.id === sentenceId ? { ...s, tags: currentTags } : s
+      ));
+    }
+  }, [sentences]);
+
+  // Create a new user tag
+  const handleCreateTag = useCallback(async (label: string, color?: string): Promise<TagInfo | null> => {
+    try {
+      const response = await fetch('/api/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label, color }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data) {
+          setUserTags(prev => [...prev, data.data]);
+          return data.data;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to create tag:', error);
+    }
+    return null;
+  }, []);
+
+  // Open tag picker modal for a sentence
+  const handleOpenTagPicker = useCallback((sentenceId: string) => {
+    setTagPickerSentenceId(sentenceId);
+  }, []);
+
+  // Close tag picker modal
+  const handleCloseTagPicker = useCallback(() => {
+    setTagPickerSentenceId(null);
+  }, []);
+
+  // Get current sentence for tag picker
+  const tagPickerSentence = tagPickerSentenceId
+    ? sentences.find(s => s.id === tagPickerSentenceId)
+    : null;
 
   // Notify parent when selection changes
   useEffect(() => {
@@ -346,6 +433,9 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onSetContextFilter={setContextFilter}
         displayMode={sidebarDisplayMode}
         onDisplayModeChange={setSidebarDisplayMode}
+        allTags={userTags}
+        onToggleTag={handleToggleTag}
+        onOpenTagPicker={handleOpenTagPicker}
       />
 
       {/* Sidebar Toggle Button - Small icon aligned with header */}
@@ -378,6 +468,9 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
               onModeToggle={handleModeToggle}
               onUpdateSentence={handleUpdateSentence}
               hideReferenceInDetailView={appSettings.hideReferenceInDetailView ?? true}
+              allTags={[...Object.values(SYSTEM_TAGS), ...userTags]}
+              onToggleTag={(tagId) => handleToggleTag(currentSentence.id, tagId)}
+              onOpenTagPicker={() => handleOpenTagPicker(currentSentence.id)}
             />
           ) : (
             <SentencePracticeArea
@@ -414,6 +507,19 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           sentences={sentences}
           onClose={() => setShowHistoryModal(false)}
           onNavigateToSentence={handleNavigateToSentence}
+        />
+      )}
+
+      {/* Tag Picker Modal */}
+      {tagPickerSentence && (
+        <TagPickerModal
+          isOpen={!!tagPickerSentenceId}
+          sentenceId={tagPickerSentenceId!}
+          currentTags={tagPickerSentence.tags || []}
+          userTags={userTags}
+          onToggleTag={(tagId) => handleToggleTag(tagPickerSentenceId!, tagId)}
+          onCreateTag={handleCreateTag}
+          onClose={handleCloseTagPicker}
         />
       )}
     </div>

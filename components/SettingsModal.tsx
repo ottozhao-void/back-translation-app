@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { AppSettings } from '../types';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { version } from '../package.json';
-import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon, SparklesIcon, UserCircleIcon, RefreshIcon } from './Icons';
+import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon, SparklesIcon, UserCircleIcon, RefreshIcon, TagIcon } from './Icons';
 import { AIModelsTab } from './settings/AIModelsTab';
 import { generateGreetings } from '../services/llmService';
 
@@ -20,6 +20,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     const [hotkeys, setHotkeys] = useState(settings.hotkeys || {});
     const [practiceGranularity, setPracticeGranularity] = useState<'sentence' | 'paragraph'>(settings.practiceGranularity || 'sentence');
     const [hideReferenceInDetailView, setHideReferenceInDetailView] = useState(settings.hideReferenceInDetailView ?? true);
+    const [hideSkippedByDefault, setHideSkippedByDefault] = useState(settings.hideSkippedByDefault ?? true);
     const [userName, setUserName] = useState(settings.userName || '');
     const [greetingPrompt, setGreetingPrompt] = useState(settings.greetingPrompt || '');
     const [recordingCommandId, setRecordingCommandId] = useState<string | null>(null);
@@ -84,6 +85,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
             hotkeys,
             practiceGranularity,
             hideReferenceInDetailView,
+            hideSkippedByDefault,
             userName: userName.trim() || undefined,
             greetingPrompt: greetingPrompt.trim() || undefined,
         });
@@ -140,6 +142,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     const sidebarItems = [
         { name: 'Greeting', icon: UserCircleIcon },
         { name: 'General', icon: SystemIcon },
+        { name: 'Tags', icon: TagIcon },
         { name: 'Hotkeys', icon: KeyboardIcon },
         { name: 'AI Models', icon: SparklesIcon },
     ];
@@ -437,11 +440,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                             </div>
                         )}
 
+                        {activeTab === 'Tags' && (
+                            <div className="space-y-6 max-w-2xl">
+                                {/* Setting Item: Hide Skipped by Default */}
+                                <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Hide Skipped Sentences</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                            Hide sentences marked with "跳过" tag by default in the sentence list
+                                        </span>
+                                    </div>
+                                    <button
+                                        onClick={() => setHideSkippedByDefault(!hideSkippedByDefault)}
+                                        className={`w-12 h-6 rounded-full transition-colors relative ${hideSkippedByDefault ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${hideSkippedByDefault ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                </div>
+
+                                {/* System Tags Info */}
+                                <div className="p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-3">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>System Tags</span>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#6b7280' }} />
+                                                <span className="text-sm" style={{ color: 'var(--text-main)' }}>跳过</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>— Skip this sentence during practice</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }} />
+                                                <span className="text-sm" style={{ color: 'var(--text-main)' }}>已掌握</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>— Mark as mastered</span>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
+                                                <span className="text-sm" style={{ color: 'var(--text-main)' }}>困难</span>
+                                                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>— Mark as difficult for extra practice</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Usage Tips */}
+                                <div className="p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-2">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Tips</span>
+                                        <ul className="text-xs space-y-1.5" style={{ color: 'var(--text-secondary)' }}>
+                                            <li>• Right-click a sentence to quickly toggle system tags</li>
+                                            <li>• Click "管理标签..." to create and manage custom tags</li>
+                                            <li>• Use the 🏷 view mode in sidebar to browse by tag</li>
+                                            <li>• Custom tags can have any color you choose</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'AI Models' && (
                             <AIModelsTab />
                         )}
 
-                        {activeTab !== 'General' && activeTab !== 'Hotkeys' && activeTab !== 'AI Models' && (
+                        {activeTab !== 'General' && activeTab !== 'Hotkeys' && activeTab !== 'AI Models' && activeTab !== 'Greeting' && activeTab !== 'Tags' && (
                             <div className="flex flex-col items-center justify-center h-64 text-[var(--text-secondary)]">
                                 <div className="mb-4 opacity-50 scale-150">
                                     {(() => {
