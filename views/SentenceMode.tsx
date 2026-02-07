@@ -6,11 +6,12 @@ import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/Sent
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
 import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
-import { SidebarCollapseIcon, SidebarExpandIcon } from '../components/Icons';
+import { SidebarCollapseIcon, SidebarExpandIcon, HomeIcon } from '../components/Icons';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { ToastContainer, useToast } from '../components/Toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingSpinner } from '../components/Skeleton';
+import { GreetingDisplay } from '../components/GreetingDisplay';
 
 // Helper to match hotkey
 const matchesHotkey = (e: KeyboardEvent, hotkeyString: string): boolean => {
@@ -37,13 +38,27 @@ const matchesHotkey = (e: KeyboardEvent, hotkeyString: string): boolean => {
 interface SentenceModeProps {
   articles: Article[];
   appSettings: AppSettings;
+  onSelectionChange?: (hasSelection: boolean) => void;
+  shouldClearSelection?: boolean;
 }
 
-export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSettings }) => {
+export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSettings, onSelectionChange, shouldClearSelection }) => {
   const [sentences, setSentences] = useState<SentencePair[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
   const [isLoading, setIsLoading] = useState(true);
+
+  // Notify parent when selection changes
+  useEffect(() => {
+    onSelectionChange?.(selectedId !== null);
+  }, [selectedId, onSelectionChange]);
+
+  // Clear selection when parent requests it
+  useEffect(() => {
+    if (shouldClearSelection) {
+      setSelectedId(null);
+    }
+  }, [shouldClearSelection]);
 
   // View mode: 'detail' shows SentenceDetailView, 'practice' shows SentencePracticeArea
   const [viewMode, setViewMode] = useState<'detail' | 'practice'>('detail');
@@ -319,51 +334,55 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onDisplayModeChange={setSidebarDisplayMode}
       />
 
-      {/* Sidebar Toggle Button - Outside sidebar, on the right edge */}
+      {/* Sidebar Toggle Button - Small icon aligned with header */}
       <button
         onClick={toggleSidebar}
-        className="flex-shrink-0 w-6 flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors border-r border-[var(--glass-border)] group"
+        className="flex-shrink-0 w-5 h-10 flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors rounded-r group self-start mt-4"
         title={sidebarCollapsed ? 'Expand Sidebar (⌘B)' : 'Collapse Sidebar (⌘B)'}
-        style={{ backgroundColor: 'var(--surface-hover)', opacity: 0.5 }}
-        onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.opacity = '1'}
-        onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => e.currentTarget.style.opacity = '0.5'}
+        style={{ backgroundColor: 'transparent' }}
       >
-        <div style={{ color: 'var(--text-secondary)' }}>
+        <div
+          className="opacity-40 group-hover:opacity-100 transition-opacity"
+          style={{ color: 'var(--text-secondary)' }}
+        >
           {sidebarCollapsed ? <SidebarExpandIcon /> : <SidebarCollapseIcon />}
         </div>
       </button>
 
       {/* Main Content Area - Detail View or Practice Area */}
       {currentSentence ? (
-        viewMode === 'detail' ? (
-          <SentenceDetailView
-            sentence={currentSentence}
-            practiceMode={practiceMode}
-            allSentences={sentences}
-            onStartPractice={handleStartPractice}
-            onShowParagraphContext={handleShowParagraphContext}
-            onShowArticleContext={handleShowArticleContext}
-            onModeToggle={handleModeToggle}
-            onUpdateSentence={handleUpdateSentence}
-            hideReferenceInDetailView={appSettings.hideReferenceInDetailView ?? true}
-          />
-        ) : (
-          <SentencePracticeArea
-            sentence={currentSentence}
-            practiceMode={practiceMode}
-            onModeToggle={handleModeToggle}
-            onSubmit={handleSubmit}
-            appSettings={appSettings}
-            onBack={handleBackToDetail}
-          />
-        )
+        <div className="flex-1 flex flex-col">
+          {/* Content */}
+          {viewMode === 'detail' ? (
+            <SentenceDetailView
+              sentence={currentSentence}
+              practiceMode={practiceMode}
+              allSentences={sentences}
+              onStartPractice={handleStartPractice}
+              onShowParagraphContext={handleShowParagraphContext}
+              onShowArticleContext={handleShowArticleContext}
+              onModeToggle={handleModeToggle}
+              onUpdateSentence={handleUpdateSentence}
+              hideReferenceInDetailView={appSettings.hideReferenceInDetailView ?? true}
+            />
+          ) : (
+            <SentencePracticeArea
+              sentence={currentSentence}
+              practiceMode={practiceMode}
+              onModeToggle={handleModeToggle}
+              onSubmit={handleSubmit}
+              appSettings={appSettings}
+              onBack={handleBackToDetail}
+            />
+          )}
+        </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center" style={{ color: 'var(--text-secondary)' }}>
-            <div className="text-4xl mb-4">📚</div>
-            <p className="text-lg">Select a sentence to start practicing</p>
-            <p className="text-sm mt-2">Or add new content from the sidebar</p>
-          </div>
+          <GreetingDisplay
+            userName={appSettings.userName}
+            greetingPrompt={appSettings.greetingPrompt}
+            className="px-8"
+          />
         </div>
       )}
 

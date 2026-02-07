@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppSettings } from '../types';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { version } from '../package.json';
-import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon, SparklesIcon } from './Icons';
+import { XMarkIcon, SystemIcon, KeyboardIcon, ArrowUturnLeftIcon, SparklesIcon, UserCircleIcon, RefreshIcon } from './Icons';
 import { AIModelsTab } from './settings/AIModelsTab';
+import { generateGreetings } from '../services/llmService';
 
 interface SettingsModalProps {
     settings: AppSettings;
@@ -12,14 +13,66 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate, onClose }) => {
-    const [activeTab, setActiveTab] = useState('General');
+    const [activeTab, setActiveTab] = useState('Greeting');
     const [autoSaveEnabled, setAutoSaveEnabled] = useState(settings.autoSave.enabled);
     const [autoSaveDelay, setAutoSaveDelay] = useState(settings.autoSave.delay / 1000);
     const [llmThreshold, setLlmThreshold] = useState(settings.llmThreshold);
     const [hotkeys, setHotkeys] = useState(settings.hotkeys || {});
     const [practiceGranularity, setPracticeGranularity] = useState<'sentence' | 'paragraph'>(settings.practiceGranularity || 'sentence');
     const [hideReferenceInDetailView, setHideReferenceInDetailView] = useState(settings.hideReferenceInDetailView ?? true);
+    const [userName, setUserName] = useState(settings.userName || '');
+    const [greetingPrompt, setGreetingPrompt] = useState(settings.greetingPrompt || '');
     const [recordingCommandId, setRecordingCommandId] = useState<string | null>(null);
+
+    // Greeting preview state
+    const [greetingPreview, setGreetingPreview] = useState<string[]>([]);
+    const [isLoadingGreetings, setIsLoadingGreetings] = useState(false);
+    const [greetingError, setGreetingError] = useState<string | null>(null);
+
+    // Load existing greetings from cache on mount
+    useEffect(() => {
+        const cachedData = localStorage.getItem('aether_greetings_cache');
+        if (cachedData) {
+            try {
+                const cache = JSON.parse(cachedData);
+                if (cache.greetings && Array.isArray(cache.greetings)) {
+                    setGreetingPreview(cache.greetings);
+                }
+            } catch {
+                // Ignore parse errors
+            }
+        }
+    }, []);
+
+    // Regenerate greetings
+    const handleRegenerateGreetings = useCallback(async () => {
+        setIsLoadingGreetings(true);
+        setGreetingError(null);
+        try {
+            const result = await generateGreetings(userName || undefined, greetingPrompt || undefined, 5);
+            if (result.success && result.greetings.length > 0) {
+                setGreetingPreview(result.greetings);
+                // Update cache
+                const newCache = {
+                    greetings: result.greetings,
+                    userName: userName || undefined,
+                    prompt: greetingPrompt || undefined,
+                    timestamp: Date.now(),
+                };
+                localStorage.setItem('aether_greetings_cache', JSON.stringify(newCache));
+                // Reset rotation index
+                localStorage.setItem('aether_greeting_index', '0');
+            } else if (result.usedFallback) {
+                setGreetingError('No LLM provider configured. Using default greetings.');
+                setGreetingPreview(result.greetings);
+            }
+        } catch (error) {
+            setGreetingError('Failed to generate greetings. Check your LLM settings.');
+            console.error('Failed to regenerate greetings:', error);
+        } finally {
+            setIsLoadingGreetings(false);
+        }
+    }, [userName, greetingPrompt]);
 
     const handleSave = () => {
         onUpdate({
@@ -31,6 +84,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
             hotkeys,
             practiceGranularity,
             hideReferenceInDetailView,
+            userName: userName.trim() || undefined,
+            greetingPrompt: greetingPrompt.trim() || undefined,
         });
         onClose();
     };
@@ -83,6 +138,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     };
 
     const sidebarItems = [
+        { name: 'Greeting', icon: UserCircleIcon },
         { name: 'General', icon: SystemIcon },
         { name: 'Hotkeys', icon: KeyboardIcon },
         { name: 'AI Models', icon: SparklesIcon },
@@ -132,6 +188,104 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
 
                     {/* Scrollable Content */}
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                        {activeTab === 'Greeting' && (
+                            <div className="space-y-6 max-w-2xl">
+                                {/* Setting Item: User Name */}
+                                <div className="flex flex-col gap-4 p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Your Name</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Used for personalized greetings when you open the app</span>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        value={userName}
+                                        onChange={(e) => setUserName(e.target.value)}
+                                        placeholder="Enter your name..."
+                                        className="w-full bg-[var(--bg-main)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 outline-none focus:border-[var(--text-main)] transition-colors"
+                                        style={{ color: 'var(--text-main)' }}
+                                    />
+                                </div>
+
+                                {/* Setting Item: Greeting Prompt */}
+                                <div className="flex flex-col gap-4 p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Greeting Prompt</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                            Custom prompt for AI to generate personalized greetings. Use <code className="px-1 py-0.5 rounded bg-[var(--surface-hover)]">{'{{name}}'}</code> as placeholder for your name.
+                                        </span>
+                                    </div>
+                                    <textarea
+                                        value={greetingPrompt}
+                                        onChange={(e) => setGreetingPrompt(e.target.value)}
+                                        placeholder={`Example: Generate a warm, encouraging greeting for {{name}} who is practicing English-Chinese translation. Keep it brief (1-2 sentences), friendly, and motivating. Vary the style each time.`}
+                                        rows={4}
+                                        className="w-full bg-[var(--bg-main)] border border-[var(--glass-border)] rounded-lg px-4 py-2.5 outline-none focus:border-[var(--text-main)] transition-colors resize-none"
+                                        style={{ color: 'var(--text-main)' }}
+                                    />
+                                    <div className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                        Leave empty to use the default greeting prompt. The AI will generate multiple greeting variations that rotate each time you visit.
+                                    </div>
+                                </div>
+
+                                {/* Greeting Preview Section */}
+                                <div className="flex flex-col gap-4 p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Generated Greetings</span>
+                                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                                                Preview of greetings that will rotate on each visit
+                                            </span>
+                                        </div>
+                                        <button
+                                            onClick={handleRegenerateGreetings}
+                                            disabled={isLoadingGreetings}
+                                            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border border-[var(--glass-border)] transition-all ${
+                                                isLoadingGreetings
+                                                    ? 'opacity-50 cursor-not-allowed'
+                                                    : 'hover:bg-[var(--surface-hover)] cursor-pointer'
+                                            }`}
+                                            style={{ color: 'var(--text-main)' }}
+                                        >
+                                            <span className={isLoadingGreetings ? 'animate-spin' : ''}>
+                                                <RefreshIcon />
+                                            </span>
+                                            <span>{isLoadingGreetings ? 'Generating...' : 'Regenerate'}</span>
+                                        </button>
+                                    </div>
+
+                                    {/* Error message */}
+                                    {greetingError && (
+                                        <div className="text-xs px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30" style={{ color: 'var(--text-secondary)' }}>
+                                            {greetingError}
+                                        </div>
+                                    )}
+
+                                    {/* Greetings list */}
+                                    <div className="space-y-2">
+                                        {greetingPreview.length > 0 ? (
+                                            greetingPreview.map((g, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="px-3 py-2 rounded-lg text-sm italic"
+                                                    style={{
+                                                        backgroundColor: 'var(--bg-main)',
+                                                        color: 'var(--text-secondary)',
+                                                        borderLeft: '3px solid var(--glass-border)',
+                                                    }}
+                                                >
+                                                    "{g}"
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>
+                                                No greetings generated yet. Click "Regenerate" to create personalized greetings.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'General' && (
                             <div className="space-y-6 max-w-2xl">
 

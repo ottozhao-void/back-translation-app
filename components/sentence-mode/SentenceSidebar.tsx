@@ -333,12 +333,6 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         </div>
       </div>
 
-      {/* View Mode Selector - Only show when not in context filter mode */}
-      {!contextFilter && (
-        <div className="px-4 py-2 border-b border-[var(--glass-border)] flex-shrink-0">
-          <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
-        </div>
-      )}
 
       {/* Content - Flat sentence list or Group list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -406,8 +400,15 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         </div>
       )}
 
+      {/* View Mode Selector - Above Import, only show when not in context filter mode */}
+      {!contextFilter && (
+        <div className="px-4 py-3 border-t border-[var(--glass-border)] flex-shrink-0">
+          <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
+        </div>
+      )}
+
       {/* Import Button - Always visible */}
-      <div className="p-4 border-t border-[var(--glass-border)] flex-shrink-0">
+      <div className="px-4 pb-4 pt-2 flex-shrink-0">
         <button
           onClick={onImport}
           className="w-full py-2 px-4 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
