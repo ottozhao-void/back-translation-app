@@ -1,44 +1,27 @@
 import React from 'react';
 
 interface PracticeToolbarProps {
-  onHint: () => void;
   onSubmit: () => void;
   onSkip: () => void;
   onReset: () => void;
   isSubmitDisabled: boolean;
-  showHint: boolean;
 }
 
 /**
  * PracticeToolbar - Bottom action bar for practice view
  *
  * Actions:
- * - Hint: Show partial answer
  * - Submit: Submit translation
  * - Skip: Move to next sentence
  * - Reset: Clear current input
  */
 export const PracticeToolbar: React.FC<PracticeToolbarProps> = ({
-  onHint,
   onSubmit,
   onSkip,
   onReset,
   isSubmitDisabled,
-  showHint,
 }) => {
   const buttons = [
-    {
-      id: 'hint',
-      label: '提示',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-        </svg>
-      ),
-      onClick: onHint,
-      isActive: showHint,
-    },
     {
       id: 'submit',
       label: '提交',
@@ -95,8 +78,6 @@ export const PracticeToolbar: React.FC<PracticeToolbarProps> = ({
           style={{
             backgroundColor: button.isPrimary
               ? 'var(--text-main)'
-              : button.isActive
-              ? 'var(--surface-active)'
               : 'transparent',
             color: button.isPrimary
               ? 'var(--bg-main)'

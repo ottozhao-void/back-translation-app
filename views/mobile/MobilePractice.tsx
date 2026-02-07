@@ -38,7 +38,6 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   const [isFlipped, setIsFlipped] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showHint, setShowHint] = useState(false);
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Get the correct text based on practice mode
@@ -48,15 +47,14 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
     ? sentence.userTranslationZh
     : sentence.userTranslationEn;
 
-  // Initialize input with existing draft
+  // Initialize input with existing translation (draft or submitted)
   React.useEffect(() => {
-    if (existingTranslation?.type === 'draft') {
+    if (existingTranslation?.text) {
       setUserInput(existingTranslation.text);
     } else {
       setUserInput('');
     }
     setIsFlipped(false);
-    setShowHint(false);
   }, [sentence.id, existingTranslation]);
 
   // Auto-save draft
@@ -134,16 +132,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   const handleReset = () => {
     setUserInput('');
     setIsFlipped(false);
-    setShowHint(false);
   };
-
-  // Toggle hint (show first few characters of reference)
-  const handleHint = () => {
-    setShowHint(!showHint);
-  };
-
-  // Generate hint text (first 20% of reference)
-  const hintText = referenceText.slice(0, Math.ceil(referenceText.length * 0.2)) + '...';
 
   return (
     <div className="flex flex-col h-full px-4 pt-4 pb-24">
@@ -159,19 +148,6 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
           canSwipeRight={currentIndex > 0}
           lang={mode === 'EN_TO_ZH' ? 'en' : 'zh'}
         />
-
-        {/* Hint display */}
-        {showHint && !isFlipped && (
-          <div
-            className="mt-2 px-4 py-2 rounded-lg text-sm"
-            style={{
-              backgroundColor: 'var(--surface-hover)',
-              color: 'var(--text-secondary)',
-            }}
-          >
-            Hint: {hintText}
-          </div>
-        )}
       </div>
 
       {/* Translation Input - fixed section */}
@@ -187,12 +163,10 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
       {/* Bottom Toolbar - fixed section */}
       <div className="flex-shrink-0 mt-3">
         <PracticeToolbar
-          onHint={handleHint}
           onSubmit={handleSubmit}
           onSkip={handleSkip}
           onReset={handleReset}
           isSubmitDisabled={!userInput.trim() || isSubmitting}
-          showHint={showHint}
         />
       </div>
     </div>
