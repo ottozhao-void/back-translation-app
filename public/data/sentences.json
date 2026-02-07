@@ -305,34 +305,11 @@
       "paragraphId": "article-1.md_p5",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "diff",
         "text": "对于某个取自初译稿的中式英语例句，除了极少数情况，本书提供的改进意见（也就是B版本）来自于审核该例句的润色者。但是，如果 A 版本出现在发表刊物中，我就会给出我认为应该做出的改进。不论是哪种情况，所提供的B版本都不一定是唯一正确的版本。相比于科学，翻译更像是一门手艺，任何领域的手艺人都有着其就某一技术问题最佳方案的独特观点。",
-        "timestamp": 1766274011468,
-        "history": [
-          {
-            "type": "draft",
-            "text": "qwd",
-            "timestamp": 1766187820336
-          },
-          {
-            "type": "draft",
-            "text": "qwddwqd",
-            "timestamp": 1766187829945
-          },
-          {
-            "type": "draft",
-            "text": "12",
-            "timestamp": 1766187918101
-          },
-          {
-            "type": "draft",
-            "text": "123",
-            "timestamp": 1766188646391
-          }
-        ],
-        "score": 81
+        "timestamp": 1770484179315
       },
-      "lastPracticed": 1766275597956,
+      "lastPracticed": 1770484179315,
       "articleId": "1766188879030_the_translator_s_guide_to_chinglish___forward.json",
       "paragraphOrder": 5,
       "order": 0
@@ -1855,5 +1832,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770475379247
+  "lastModified": 1770484179476
 }

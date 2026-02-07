@@ -86,23 +86,30 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
       <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full">
         {/* Sentence Content Card */}
         <div className="glass-panel rounded-2xl p-8">
-          {/* Header Row: Mode Toggle + Tags + Practiced Badge */}
+          {/* Header Row: Mode Toggle + Tags */}
           <div className="flex items-center justify-between mb-6">
-            {/* Left: Mode Toggle */}
-            <button
-              onClick={onModeToggle}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-80 flex-shrink-0"
-              style={{
-                backgroundColor: 'var(--surface-hover)',
-                color: 'var(--text-main)',
-                border: '1px solid var(--glass-border)'
-              }}
-            >
-              {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
-            </button>
+            {/* Left: Mode Toggle + Practiced Badge */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                onClick={onModeToggle}
+                className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-80"
+                style={{
+                  backgroundColor: 'var(--surface-hover)',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--glass-border)'
+                }}
+              >
+                {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
+              </button>
+              {hasPracticed && (
+                <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
+                  Practiced
+                </span>
+              )}
+            </div>
 
-            {/* Center: Tags */}
-            <div className="flex flex-wrap items-center justify-center gap-2 mx-4 min-w-0 flex-1">
+            {/* Right: Tags */}
+            <div className="flex flex-wrap items-center justify-end gap-2 ml-4 min-w-0">
               {sentence.tags && sentence.tags.length > 0 ? (
                 sentence.tags.map((tagId) => {
                   const tagInfo = allTags.find(t => t.id === tagId);
@@ -130,15 +137,6 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
                 >
                   + Tag
                 </button>
-              )}
-            </div>
-
-            {/* Right: Practiced Badge */}
-            <div className="flex-shrink-0">
-              {hasPracticed && (
-                <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
-                  Practiced
-                </span>
               )}
             </div>
           </div>

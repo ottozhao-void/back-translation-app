@@ -226,3 +226,5 @@ The app includes a generic LLM platform for AI-powered features like intelligent
 - **Port conflicts**: Vite dev server auto-increments port if 3000 is in use. Check terminal output for actual port.
 - **ArticleList unused**: Despite being in codebase, `ArticleList.tsx` is not rendered. `SentenceMode.tsx` is the actual home view.
 - **ModelSelector TypeScript error**: `components/settings/ModelSelector.tsx` has a pre-existing TS error (`Property 'filter' does not exist on type 'unknown'`). This doesn't block builds but shows in `tsc --noEmit`.
+- **prefers-reduced-motion**: `index.html` 中的 `@media (prefers-reduced-motion: reduce)` 使用 `!important` 禁用所有动画/过渡。如果需要保留特定动画，使用 `.motion-safe-transition`（过渡）或 `.motion-safe-animation`（动画）类来豁免。
+- **Flex 布局百分比计算**: 嵌套 flex 容器中使用百分比 `translateX` 时，需要在父容器添加 `min-w-0` 防止 `min-width: auto` 导致计算错误。
