@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { SentencePair, PracticeMode, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, SystemTagId } from '../../types';
 import { ArrowLeftIcon, HistoryIcon } from '../Icons';
-import { TagDots, getTagInfo } from './TagChip';
+import { TagDots } from './TagChip';
 
 interface SentenceItemProps {
   sentence: SentencePair;
@@ -116,7 +116,6 @@ const ViewModeSelector: React.FC<{
     { value: 'flat', label: 'Flat', icon: '☰' },
     { value: 'by-article', label: 'Article', icon: '📄' },
     { value: 'by-paragraph', label: 'Paragraph', icon: '¶' },
-    { value: 'by-tag', label: 'Tag', icon: '🏷' },
   ];
 
   return (
@@ -267,34 +266,6 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         }
         groups.get(groupId)!.count++;
       });
-    } else if (displayMode === 'by-tag') {
-      // Count sentences by tag
-      const tagCounts = new Map<string, number>();
-      let untaggedCount = 0;
-
-      sentences.forEach(s => {
-        if (!s.tags || s.tags.length === 0) {
-          untaggedCount++;
-        } else {
-          s.tags.forEach(tagId => {
-            tagCounts.set(tagId, (tagCounts.get(tagId) || 0) + 1);
-          });
-        }
-      });
-
-      // Add untagged group first
-      if (untaggedCount > 0) {
-        groups.set('_untagged', { label: '无标签', count: untaggedCount, color: '#9ca3af' });
-      }
-
-      // Add tag groups
-      tagCounts.forEach((count, tagId) => {
-        const tagInfo = getTagInfo(tagId);
-        // Try to get color from allTags if available
-        const userTag = allTags.find(t => t.id === tagId);
-        const color = userTag?.color || tagInfo.color;
-        groups.set(tagId, { label: tagInfo.label, count, color });
-      });
     }
 
     return groups;
@@ -316,22 +287,6 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         id: groupId === 'ungrouped' ? '' : groupId,
         label,
       });
-    } else if (displayMode === 'by-tag') {
-      // For untagged, we need special handling
-      if (groupId === '_untagged') {
-        // Filter to sentences without any tags
-        onSetContextFilter({
-          type: 'tag',
-          id: '_untagged',
-          label: '无标签',
-        });
-      } else {
-        onSetContextFilter({
-          type: 'tag',
-          id: groupId,
-          label,
-        });
-      }
     }
   };
 

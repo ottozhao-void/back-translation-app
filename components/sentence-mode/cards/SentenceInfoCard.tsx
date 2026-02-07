@@ -86,11 +86,12 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
       <div className="flex-1 flex flex-col justify-center max-w-2xl mx-auto w-full">
         {/* Sentence Content Card */}
         <div className="glass-panel rounded-2xl p-8">
-          {/* Header Row: Mode Toggle + Practiced Badge */}
-          <div className="flex items-center justify-between mb-4">
+          {/* Header Row: Mode Toggle + Tags + Practiced Badge */}
+          <div className="flex items-center justify-between mb-6">
+            {/* Left: Mode Toggle */}
             <button
               onClick={onModeToggle}
-              className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-80"
+              className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-80 flex-shrink-0"
               style={{
                 backgroundColor: 'var(--surface-hover)',
                 color: 'var(--text-main)',
@@ -99,43 +100,47 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
             >
               {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
             </button>
-            {hasPracticed && (
-              <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
-                Practiced
-              </span>
-            )}
-          </div>
 
-          {/* Tags Row */}
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            {sentence.tags && sentence.tags.length > 0 ? (
-              sentence.tags.map((tagId) => {
-                const tagInfo = allTags.find(t => t.id === tagId);
-                return (
-                  <TagChip
-                    key={tagId}
-                    tag={tagInfo || tagId}
-                    size="sm"
-                    showLabel
-                    onRemove={onToggleTag ? () => onToggleTag(tagId) : undefined}
-                  />
-                );
-              })
-            ) : (
-              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                No tags
-              </span>
-            )}
-            {onOpenTagPicker && (
-              <button
-                onClick={onOpenTagPicker}
-                className="px-2 py-1 text-xs rounded-lg border border-dashed border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors"
-                style={{ color: 'var(--text-secondary)' }}
-                title="Add or manage tags"
-              >
-                + Tag
-              </button>
-            )}
+            {/* Center: Tags */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mx-4 min-w-0 flex-1">
+              {sentence.tags && sentence.tags.length > 0 ? (
+                sentence.tags.map((tagId) => {
+                  const tagInfo = allTags.find(t => t.id === tagId);
+                  return (
+                    <TagChip
+                      key={tagId}
+                      tag={tagInfo || tagId}
+                      size="sm"
+                      showLabel
+                      onRemove={onToggleTag ? () => onToggleTag(tagId) : undefined}
+                    />
+                  );
+                })
+              ) : (
+                <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  No tags
+                </span>
+              )}
+              {onOpenTagPicker && (
+                <button
+                  onClick={onOpenTagPicker}
+                  className="px-2 py-1 text-xs rounded-lg border border-dashed border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors"
+                  style={{ color: 'var(--text-secondary)' }}
+                  title="Add or manage tags"
+                >
+                  + Tag
+                </button>
+              )}
+            </div>
+
+            {/* Right: Practiced Badge */}
+            <div className="flex-shrink-0">
+              {hasPracticed && (
+                <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
+                  Practiced
+                </span>
+              )}
+            </div>
           </div>
 
           {/* Source Text */}
