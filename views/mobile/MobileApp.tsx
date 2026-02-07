@@ -3,6 +3,8 @@ import { SentencePair, AppSettings, PracticeMode } from '../../types';
 import { fetchSentenceSummary, fetchSentenceById, SentenceSummary } from '../../utils/sentenceLoader';
 import { BottomTabBar } from '../../components/mobile/BottomTabBar';
 import { MobileHeader } from '../../components/mobile/MobileHeader';
+import { MobileGreetingOverlay } from '../../components/mobile/MobileGreetingOverlay';
+import { MobileModeSelector } from '../../components/mobile/MobileModeSelector';
 import { MobileHome } from './MobileHome';
 import { MobilePractice } from './MobilePractice';
 import { MobileSettings } from './MobileSettings';
@@ -33,6 +35,10 @@ export const MobileApp: React.FC<MobileAppProps> = ({
 }) => {
   // Navigation state
   const [activeTab, setActiveTab] = useState<MobileTab>('home');
+
+  // Greeting and mode selector state
+  const [showGreeting, setShowGreeting] = useState(true);
+  const [showModeSelector, setShowModeSelector] = useState(false);
 
   // Data state
   const [summaries, setSummaries] = useState<SentenceSummary[]>([]);
@@ -119,6 +125,30 @@ export const MobileApp: React.FC<MobileAppProps> = ({
     setSelectedSentence(null);
   };
 
+  // Handle greeting dismiss - transition to mode selector
+  const handleGreetingDismiss = () => {
+    setShowGreeting(false);
+    setShowModeSelector(true);
+  };
+
+  // Fisher-Yates shuffle algorithm
+  function shuffleArray<T>(array: T[]): T[] {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
+  // Handle random mode selection
+  const handleRandomMode = () => {
+    if (summaries.length === 0) return;
+    const shuffledIds = shuffleArray(summaries.map(s => s.id));
+    handleStartPractice(shuffledIds);
+    setShowModeSelector(false);
+  };
+
   // Render header based on active tab
   const renderHeader = () => {
     switch (activeTab) {
@@ -199,20 +229,43 @@ export const MobileApp: React.FC<MobileAppProps> = ({
       className="flex flex-col h-screen w-screen overflow-hidden"
       style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}
     >
-      {/* Header - fixed at top */}
-      {renderHeader()}
+      {/* Greeting overlay - shown on app open */}
+      {showGreeting && (
+        <MobileGreetingOverlay
+          userName={appSettings.userName}
+          greetingPrompt={appSettings.greetingPrompt}
+          onDismiss={handleGreetingDismiss}
+        />
+      )}
 
-      {/* Content area - scrollable */}
-      <main className="flex-1 overflow-auto pb-20">
-        {renderContent()}
-      </main>
+      {/* Mode selector - shown after greeting dismissed */}
+      {showModeSelector && (
+        <MobileModeSelector
+          onSelectRandomMode={handleRandomMode}
+          totalSentenceCount={summaries.length}
+          isLoading={isLoading}
+        />
+      )}
 
-      {/* Bottom Tab Bar - fixed at bottom */}
-      <BottomTabBar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        practiceBadge={unpracticedCount > 0 ? unpracticedCount : undefined}
-      />
+      {/* Normal content - only interactive after overlays are hidden */}
+      {!showGreeting && !showModeSelector && (
+        <>
+          {/* Header - fixed at top */}
+          {renderHeader()}
+
+          {/* Content area - scrollable */}
+          <main className="flex-1 overflow-auto pb-20">
+            {renderContent()}
+          </main>
+
+          {/* Bottom Tab Bar - fixed at bottom */}
+          <BottomTabBar
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            practiceBadge={unpracticedCount > 0 ? unpracticedCount : undefined}
+          />
+        </>
+      )}
     </div>
   );
 };
