@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { SentencePair, PracticeMode } from '../../../types';
+import { SentencePair, PracticeMode, TagInfo } from '../../../types';
 import { SpeakerIcon, PencilIcon } from '../../Icons';
 import { playTextToSpeech } from '../../../services/geminiService';
 import { TextEditModal } from '../TextEditModal';
+import { TagChip } from '../TagChip';
 
 interface SentenceInfoCardProps {
   sentence: SentencePair;
@@ -14,6 +15,10 @@ interface SentenceInfoCardProps {
   onModeToggle: () => void;
   onUpdateSentence?: (id: string, updates: Partial<SentencePair>) => void;
   hideReferenceInDetailView?: boolean;
+  // Tag system props
+  allTags?: TagInfo[];
+  onToggleTag?: (tagId: string) => void;
+  onOpenTagPicker?: () => void;
 }
 
 /**
@@ -32,6 +37,9 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
   onModeToggle,
   onUpdateSentence,
   hideReferenceInDetailView = true,
+  allTags = [],
+  onToggleTag,
+  onOpenTagPicker,
 }) => {
   // State to temporarily reveal the hidden reference
   const [isReferenceRevealed, setIsReferenceRevealed] = useState(false);
@@ -79,7 +87,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
         {/* Sentence Content Card */}
         <div className="glass-panel rounded-2xl p-8">
           {/* Header Row: Mode Toggle + Practiced Badge */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between mb-4">
             <button
               onClick={onModeToggle}
               className="px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 hover:opacity-80"
@@ -95,6 +103,38 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
               <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">
                 Practiced
               </span>
+            )}
+          </div>
+
+          {/* Tags Row */}
+          <div className="flex flex-wrap items-center gap-2 mb-6">
+            {sentence.tags && sentence.tags.length > 0 ? (
+              sentence.tags.map((tagId) => {
+                const tagInfo = allTags.find(t => t.id === tagId);
+                return (
+                  <TagChip
+                    key={tagId}
+                    tag={tagInfo || tagId}
+                    size="sm"
+                    showLabel
+                    onRemove={onToggleTag ? () => onToggleTag(tagId) : undefined}
+                  />
+                );
+              })
+            ) : (
+              <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                No tags
+              </span>
+            )}
+            {onOpenTagPicker && (
+              <button
+                onClick={onOpenTagPicker}
+                className="px-2 py-1 text-xs rounded-lg border border-dashed border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors"
+                style={{ color: 'var(--text-secondary)' }}
+                title="Add or manage tags"
+              >
+                + Tag
+              </button>
             )}
           </div>
 

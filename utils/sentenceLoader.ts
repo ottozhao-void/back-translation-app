@@ -16,6 +16,7 @@ export interface SentenceSummary {
   hasUserTranslation: boolean;
   lastPracticed?: number;
   createdAt: number;
+  tags: string[];  // Tag IDs for filtering and display
 }
 
 /**

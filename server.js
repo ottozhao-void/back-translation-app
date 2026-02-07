@@ -21,6 +21,8 @@ const dataDir = path.join(__dirname, 'public', 'data');
 const distDataDir = path.join(__dirname, 'dist', 'data');
 const sentencesFile = path.join(dataDir, 'sentences.json');
 const distSentencesFile = path.join(distDataDir, 'sentences.json');
+const tagsFile = path.join(dataDir, 'tags.json');
+const distTagsFile = path.join(distDataDir, 'tags.json');
 const llmConfigDir = path.join(__dirname, 'data');
 const llmConfigFile = path.join(llmConfigDir, 'llm-config.json');
 
@@ -275,6 +277,133 @@ app.delete('/api/llm/provider', (req, res) => {
   }
 });
 
+// === Tag API Routes ===
+
+const DEFAULT_TAG_STORE = { version: 1, userTags: [], lastModified: Date.now() };
+
+function loadTagStore() {
+  try {
+    if (fs.existsSync(tagsFile)) {
+      return JSON.parse(fs.readFileSync(tagsFile, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Failed to load tags:', e);
+  }
+  return { ...DEFAULT_TAG_STORE };
+}
+
+function saveTagStore(store) {
+  const content = JSON.stringify(store, null, 2);
+  fs.writeFileSync(tagsFile, content);
+  if (fs.existsSync(distDataDir)) {
+    fs.writeFileSync(distTagsFile, content);
+  }
+}
+
+// GET /api/tags - Get all user tags
+app.get('/api/tags', (req, res) => {
+  try {
+    const store = loadTagStore();
+    res.json({ success: true, data: store.userTags || [] });
+  } catch (e) {
+    console.error('Failed to get tags:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/tags - Create new user tag
+app.post('/api/tags', (req, res) => {
+  try {
+    const { label, color } = req.body;
+
+    if (!label || typeof label !== 'string') {
+      return res.status(400).json({ success: false, error: 'Missing or invalid label' });
+    }
+
+    const store = loadTagStore();
+    const newTag = {
+      id: `tag_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      label: label.trim(),
+      color: color || '#3b82f6',
+      isSystem: false,
+      createdAt: Date.now(),
+    };
+
+    store.userTags = store.userTags || [];
+    store.userTags.push(newTag);
+    store.lastModified = Date.now();
+    saveTagStore(store);
+
+    res.json({ success: true, data: newTag });
+  } catch (e) {
+    console.error('Failed to create tag:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// DELETE /api/tags - Delete user tag
+app.delete('/api/tags', (req, res) => {
+  try {
+    const tagId = req.query.id;
+    if (!tagId) {
+      return res.status(400).json({ success: false, error: 'Missing tag id' });
+    }
+
+    // Prevent deleting system tags
+    if (tagId.startsWith('_')) {
+      return res.status(400).json({ success: false, error: 'Cannot delete system tags' });
+    }
+
+    const store = loadTagStore();
+    const initialLength = store.userTags?.length || 0;
+    store.userTags = (store.userTags || []).filter(t => t.id !== tagId);
+
+    if (store.userTags.length === initialLength) {
+      return res.status(404).json({ success: false, error: 'Tag not found' });
+    }
+
+    store.lastModified = Date.now();
+    saveTagStore(store);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Failed to delete tag:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PATCH /api/tags/:id - Update user tag
+app.patch('/api/tags/:id', (req, res) => {
+  try {
+    const tagId = req.params.id;
+
+    // Prevent updating system tags
+    if (tagId.startsWith('_')) {
+      return res.status(400).json({ success: false, error: 'Cannot update system tags' });
+    }
+
+    const store = loadTagStore();
+    const index = (store.userTags || []).findIndex(t => t.id === tagId);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Tag not found' });
+    }
+
+    const updates = req.body;
+    // Only allow updating label and color
+    if (updates.label) store.userTags[index].label = updates.label.trim();
+    if (updates.color) store.userTags[index].color = updates.color;
+
+    store.lastModified = Date.now();
+    saveTagStore(store);
+
+    res.json({ success: true, data: store.userTags[index] });
+  } catch (e) {
+    console.error('Failed to update tag:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
 // API Routes
 app.get('/api/articles', (req, res) => {
     try {
@@ -390,6 +519,7 @@ app.get('/api/sentences/summary', (req, res) => {
             hasUserTranslation: !!(s.userTranslationZh || s.userTranslationEn),
             lastPracticed: s.lastPracticed,
             createdAt: s.createdAt,
+            tags: s.tags || [],
         }));
 
         res.json({ success: true, data: summary, total: summary.length });

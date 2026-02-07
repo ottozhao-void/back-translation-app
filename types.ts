@@ -47,6 +47,9 @@ export interface AppSettings {
   // User profile settings
   userName?: string;  // User's display name for personalized greetings
   greetingPrompt?: string;  // Custom LLM prompt for generating greetings
+
+  // Tag system settings
+  hideSkippedByDefault?: boolean;  // Hide sentences with _skip tag by default (default: true)
 }
 
 // --- Storage Keys ---
@@ -55,6 +58,34 @@ export const STORAGE_KEYS = {
   DELETED_STATIC: 'aether_deleted_static_v1',
   PROGRESS: 'aether_progress_v1',
 };
+
+// === Tag System Types ===
+
+/** 系统标签ID（下划线前缀区分用户标签） */
+export type SystemTagId = '_skip' | '_mastered' | '_difficult';
+
+/** 标签元信息 */
+export interface TagInfo {
+  id: string;           // 标签ID（系统标签以_开头）
+  label: string;        // 显示名称
+  color?: string;       // 颜色（CSS颜色值）
+  isSystem: boolean;    // 是否系统标签
+  createdAt?: number;   // 创建时间（仅用户标签）
+}
+
+/** 预定义系统标签 */
+export const SYSTEM_TAGS: Record<SystemTagId, TagInfo> = {
+  '_skip': { id: '_skip', label: '跳过', color: '#6b7280', isSystem: true },
+  '_mastered': { id: '_mastered', label: '已掌握', color: '#10b981', isSystem: true },
+  '_difficult': { id: '_difficult', label: '困难', color: '#ef4444', isSystem: true },
+};
+
+/** 用户标签存储结构 */
+export interface TagStore {
+  version: number;
+  userTags: TagInfo[];
+  lastModified: number;
+}
 
 // === Sentence Mode Types ===
 
@@ -130,13 +161,15 @@ export type SentenceFilterType =
   | { type: 'paragraph'; paragraphId: string }   // Filter by paragraph
   | { type: 'time'; order: 'asc' | 'desc' }      // Sort by time
   | { type: 'random'; count?: number }           // Random selection
-  | { type: 'tag'; tag: string };                // Filter by tag
+  | { type: 'tag'; tag: string }                 // Filter by tag
+  | { type: 'untagged' }                         // Filter untagged sentences
+  | { type: 'excludeTags'; tags: string[] };     // Exclude specific tags
 
 /**
  * Sidebar 显示模式
  * Controls how sentences are displayed in the sidebar
  */
-export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph';
+export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph' | 'by-tag';
 
 // === LLM Platform Types ===
 

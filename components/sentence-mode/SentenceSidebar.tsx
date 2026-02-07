@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { SentencePair, PracticeMode, SidebarDisplayMode } from '../../types';
+import { SentencePair, PracticeMode, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, SystemTagId } from '../../types';
 import { ArrowLeftIcon } from '../Icons';
+import { TagDots, getTagInfo } from './TagChip';
 
 interface SentenceItemProps {
   sentence: SentencePair;
@@ -10,9 +11,10 @@ interface SentenceItemProps {
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
   onMenuClick: (e: React.MouseEvent) => void;
+  allTags?: TagInfo[];  // For resolving user tag colors
 }
 
-const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected, practiceMode, onClick, onContextMenu, onMenuClick }) => {
+const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected, practiceMode, onClick, onContextMenu, onMenuClick, allTags = [] }) => {
   const translation = practiceMode === 'EN_TO_ZH' ? sentence.userTranslationZh : sentence.userTranslationEn;
   const displayText = practiceMode === 'EN_TO_ZH' ? sentence.en : sentence.zh;
 
@@ -50,6 +52,12 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
           >
             {displayText.slice(0, 60)}{displayText.length > 60 ? '...' : ''}
           </p>
+          {/* Tag indicators */}
+          {sentence.tags && sentence.tags.length > 0 && (
+            <div className="mt-1">
+              <TagDots tags={sentence.tags} allTags={allTags} maxVisible={3} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <span className={`text-xs ${statusColor}`}>{statusIcon}</span>
@@ -71,9 +79,9 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
   );
 };
 
-// Context filter for paragraph/article filtering
+// Context filter for paragraph/article/tag filtering
 export interface ContextFilter {
-  type: 'paragraph' | 'article';
+  type: 'paragraph' | 'article' | 'tag';
   id: string;
   label: string;
 }
@@ -92,6 +100,10 @@ interface SentenceSidebarProps {
   onSetContextFilter?: (filter: ContextFilter) => void;
   displayMode: SidebarDisplayMode;
   onDisplayModeChange: (mode: SidebarDisplayMode) => void;
+  // Tag system props
+  allTags?: TagInfo[];
+  onToggleTag?: (sentenceId: string, tagId: string) => void;
+  onOpenTagPicker?: (sentenceId: string) => void;
 }
 
 // View mode selector component
@@ -103,6 +115,7 @@ const ViewModeSelector: React.FC<{
     { value: 'flat', label: 'Flat', icon: '☰' },
     { value: 'by-article', label: 'Article', icon: '📄' },
     { value: 'by-paragraph', label: 'Paragraph', icon: '¶' },
+    { value: 'by-tag', label: 'Tag', icon: '🏷' },
   ];
 
   return (
@@ -171,8 +184,20 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   onSetContextFilter,
   displayMode,
   onDisplayModeChange,
+  allTags = [],
+  onToggleTag,
+  onOpenTagPicker,
 }) => {
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+
+  // Get the sentence for context menu
+  const contextMenuSentence = React.useMemo(() => {
+    if (!contextMenu) return null;
+    return sentences.find(s => s.id === contextMenu.id) || null;
+  }, [contextMenu, sentences]);
+
+  // System tags as array for menu
+  const systemTagList = React.useMemo(() => Object.values(SYSTEM_TAGS), []);
 
   // Get displayed sentences - either filtered by context or all sentences
   const displayedSentences = React.useMemo(() => {
@@ -202,17 +227,23 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
           return a.order - b.order;
         });
     }
+    if (contextFilter.type === 'tag') {
+      // For tag context, filter by tag and sort by creation time
+      return sentences
+        .filter(s => s.tags?.includes(contextFilter.id))
+        .sort((a, b) => b.createdAt - a.createdAt);
+    }
     return sentences;
   }, [sentences, contextFilter]);
 
-  // Group sentences by article or paragraph for group list view
+  // Group sentences by article, paragraph, or tag for group list view
   const groupList = React.useMemo(() => {
     // Only show group list when in grouped mode AND no context filter is active
     if (displayMode === 'flat' || contextFilter) {
       return null;
     }
 
-    const groups = new Map<string, { label: string; count: number }>();
+    const groups = new Map<string, { label: string; count: number; color?: string }>();
 
     if (displayMode === 'by-article') {
       sentences.forEach(s => {
@@ -234,10 +265,38 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         }
         groups.get(groupId)!.count++;
       });
+    } else if (displayMode === 'by-tag') {
+      // Count sentences by tag
+      const tagCounts = new Map<string, number>();
+      let untaggedCount = 0;
+
+      sentences.forEach(s => {
+        if (!s.tags || s.tags.length === 0) {
+          untaggedCount++;
+        } else {
+          s.tags.forEach(tagId => {
+            tagCounts.set(tagId, (tagCounts.get(tagId) || 0) + 1);
+          });
+        }
+      });
+
+      // Add untagged group first
+      if (untaggedCount > 0) {
+        groups.set('_untagged', { label: '无标签', count: untaggedCount, color: '#9ca3af' });
+      }
+
+      // Add tag groups
+      tagCounts.forEach((count, tagId) => {
+        const tagInfo = getTagInfo(tagId);
+        // Try to get color from allTags if available
+        const userTag = allTags.find(t => t.id === tagId);
+        const color = userTag?.color || tagInfo.color;
+        groups.set(tagId, { label: tagInfo.label, count, color });
+      });
     }
 
     return groups;
-  }, [sentences, displayMode, contextFilter]);
+  }, [sentences, displayMode, contextFilter, allTags]);
 
   // Handle clicking a group to drill down
   const handleGroupClick = (groupId: string, label: string) => {
@@ -255,6 +314,22 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         id: groupId === 'ungrouped' ? '' : groupId,
         label,
       });
+    } else if (displayMode === 'by-tag') {
+      // For untagged, we need special handling
+      if (groupId === '_untagged') {
+        // Filter to sentences without any tags
+        onSetContextFilter({
+          type: 'tag',
+          id: '_untagged',
+          label: '无标签',
+        });
+      } else {
+        onSetContextFilter({
+          type: 'tag',
+          id: groupId,
+          label,
+        });
+      }
     }
   };
 
@@ -363,15 +438,16 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               onClick={() => onSelectSentence(sentence.id)}
               onContextMenu={(e) => handleContextMenu(e, sentence.id)}
               onMenuClick={(e) => handleMenuClick(e, sentence.id)}
+              allTags={allTags}
             />
           ))
         )}
       </div>
 
       {/* Context Menu */}
-      {contextMenu && (
+      {contextMenu && contextMenuSentence && (
         <div
-          className="fixed z-50 py-1 min-w-32 rounded-lg shadow-xl border border-[var(--glass-border)]"
+          className="fixed z-50 py-1 min-w-48 rounded-lg shadow-xl border border-[var(--glass-border)]"
           style={{
             left: contextMenu.x,
             top: contextMenu.y,
@@ -379,6 +455,72 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {/* Tag Section Header */}
+          <div className="px-3 py-1.5 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--text-secondary)' }}>
+            标签
+          </div>
+
+          {/* System Tags */}
+          {systemTagList.map((tag) => {
+            const isSelected = contextMenuSentence.tags?.includes(tag.id) || false;
+            return (
+              <button
+                key={tag.id}
+                onClick={() => {
+                  if (onToggleTag) {
+                    onToggleTag(contextMenu.id, tag.id);
+                  }
+                }}
+                className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+                style={{ color: 'var(--text-main)' }}
+              >
+                {/* Checkbox indicator */}
+                <span
+                  className={`w-4 h-4 rounded border flex items-center justify-center ${
+                    isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-400'
+                  }`}
+                >
+                  {isSelected && (
+                    <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                {/* Color dot */}
+                <span
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: tag.color }}
+                />
+                <span>{tag.label}</span>
+              </button>
+            );
+          })}
+
+          {/* Divider */}
+          <div className="my-1 border-t border-[var(--glass-border)]" />
+
+          {/* Manage Tags */}
+          {onOpenTagPicker && (
+            <button
+              onClick={() => {
+                onOpenTagPicker(contextMenu.id);
+                setContextMenu(null);
+              }}
+              className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
+              style={{ color: 'var(--text-main)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                <line x1="7" y1="7" x2="7.01" y2="7" />
+              </svg>
+              <span>管理标签...</span>
+            </button>
+          )}
+
+          {/* Divider */}
+          <div className="my-1 border-t border-[var(--glass-border)]" />
+
+          {/* Delete */}
           <button
             onClick={() => handleDelete(contextMenu.id)}
             className="w-full px-4 py-2 text-left text-sm hover:bg-[var(--surface-hover)] transition-colors flex items-center gap-2"
@@ -388,7 +530,7 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
             </svg>
-            <span className="text-red-400">Delete</span>
+            <span className="text-red-400">删除</span>
           </button>
         </div>
       )}
