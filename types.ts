@@ -169,7 +169,7 @@ export type SentenceFilterType =
  * Sidebar 显示模式
  * Controls how sentences are displayed in the sidebar
  */
-export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph' | 'by-tag';
+export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph';
 
 // === LLM Platform Types ===
 
