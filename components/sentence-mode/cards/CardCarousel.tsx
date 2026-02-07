@@ -284,7 +284,7 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
       {/* Top Navigation Bar - Hanging from top edge with swing animation */}
       {cards.length > 1 && (
         <div
-          className="flex flex-col items-center flex-shrink-0"
+          className={`flex flex-col items-center flex-shrink-0 ${isSwinging ? 'motion-safe-animation' : ''}`}
           role="tablist"
           aria-label="Carousel navigation"
           style={{
@@ -347,9 +347,9 @@ export const CardCarousel: React.FC<CardCarouselProps> = ({
       )}
 
       {/* Cards Container - Horizontal sliding with swipe offset */}
-      <div className="flex-1 relative overflow-hidden">
+      <div className="flex-1 relative overflow-hidden min-w-0">
         <div
-          className="flex h-full"
+          className={`flex h-full ${swipeOffset === 0 ? 'motion-safe-transition' : ''}`}
           style={{
             transform: `translateX(calc(-${activeIndex * 100}% + ${swipeOffset}px))`,
             transition: swipeOffset === 0 ? 'transform 300ms ease-out' : 'none',
