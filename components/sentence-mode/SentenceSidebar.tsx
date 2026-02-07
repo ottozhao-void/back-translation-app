@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SentencePair, PracticeMode, SidebarDisplayMode } from '../../types';
-import { ArrowLeftIcon } from '../Icons';
+import { ArrowLeftIcon, HistoryIcon } from '../Icons';
 
 interface SentenceItemProps {
   sentence: SentencePair;
@@ -85,6 +85,7 @@ interface SentenceSidebarProps {
   onSelectSentence: (id: string) => void;
   onImport: () => void;
   onDeleteSentence?: (id: string) => void;
+  onOpenHistory?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   contextFilter?: ContextFilter | null;
@@ -164,6 +165,7 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   onSelectSentence,
   onImport,
   onDeleteSentence,
+  onOpenHistory,
   isCollapsed = false,
   onToggleCollapse,
   contextFilter,
@@ -322,12 +324,25 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               <h2 className="text-sm font-mono uppercase tracking-widest truncate" style={{ color: 'var(--text-secondary)' }}>
                 All Sentences
               </h2>
-              <span
-                className="text-xs px-1.5 py-0.5 rounded-full ml-2 flex-shrink-0"
-                style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-secondary)' }}
-              >
-                {displayedSentences.length}
-              </span>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {/* History Button */}
+                {onOpenHistory && (
+                  <button
+                    onClick={onOpenHistory}
+                    className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
+                    title="Practice History"
+                    style={{ color: 'var(--text-secondary)' }}
+                  >
+                    <HistoryIcon />
+                  </button>
+                )}
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-secondary)' }}
+                >
+                  {displayedSentences.length}
+                </span>
+              </div>
             </div>
           )}
         </div>

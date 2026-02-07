@@ -262,3 +262,36 @@ export const DEFAULT_LLM_SETTINGS: LLMSettings = {
   defaultParams: DEFAULT_MODEL_PARAMS,
   taskModels: {},
 };
+
+// === Practice History Types ===
+
+/**
+ * 练习历史条目 - 用于历史面板展示
+ * Unified history entry aggregated from all sentences
+ */
+export interface PracticeHistoryEntry {
+  id: string;                              // 组合ID: `${sentenceId}-${direction}-${timestamp}`
+  sentenceId: string;                      // 关联的句子ID
+  direction: 'en-to-zh' | 'zh-to-en';      // 练习方向
+  timestamp: number;                       // 练习时间戳
+  text: string;                            // 用户的翻译文本
+  type: FeedbackMode;                      // 反馈类型: 'diff' | 'llm' | 'draft'
+  score?: number;                          // AI评分 (仅 LLM 模式)
+  // 反规范化字段，用于展示
+  originalEn: string;                      // 原句英文
+  originalZh: string;                      // 原句中文
+  articleId?: string;                      // 来源文章ID
+}
+
+/**
+ * 时间过滤预设
+ */
+export type TimeFilterPreset = 'today' | 'week' | 'month' | 'all';
+
+/**
+ * 历史过滤状态
+ */
+export interface HistoryFilterState {
+  preset: TimeFilterPreset;
+  customRange?: { start: number; end: number };  // 未来扩展：自定义日期范围
+}
