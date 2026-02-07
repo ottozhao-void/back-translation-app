@@ -1,6 +1,13 @@
 import { SentencePair } from '../types';
 import { splitIntoSentences } from './textUtils';
 
+// ID generation helper
+const generateId = (prefix: string = 'sent'): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 6);
+  return `${prefix}_${timestamp}_${random}`;
+};
+
 /**
  * Splits a paragraph into sentence pairs
  * Uses the existing splitIntoSentences function from textUtils
@@ -19,12 +26,13 @@ export const splitParagraphToSentences = (
 
   for (let i = 0; i < maxLen; i++) {
     pairs.push({
-      id: `${articleId}_${paragraphId}_s${i}`,
+      id: generateId('sent'),
       en: enSentences[i] || '',
       zh: zhSentences[i] || '',
-      sourceType: articleId,
-      sourceIndex: i,
+      sourceType: 'article',
+      articleId,
       paragraphId,
+      order: i,
       createdAt: Date.now(),
     });
   }

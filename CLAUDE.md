@@ -61,6 +61,7 @@ index.tsx           # App root, state management, view routing
 │   ├── sentence-mode/      # SentenceMode sub-components
 │   │   ├── SentenceSidebar.tsx
 │   │   ├── SentencePracticeArea.tsx
+│   │   ├── SentenceDetailView.tsx  # Sentence detail with context actions
 │   │   ├── ImportModal.tsx       # Import with LLM segmentation
 │   │   └── AlignmentEditor.tsx   # Sentence alignment editor
 │   └── ...
@@ -112,22 +113,38 @@ UserTranslation {
 
 ### Sentence Mode Architecture (Current)
 
-The app uses a "Sentence Base" model where all translation pairs are stored in a flat list and grouped by source.
+The app uses a hierarchical "Sentence Base" model where all translation pairs are stored with optional article/paragraph context.
 
 ```typescript
 SentencePair {
   id: string;
   en: string;
   zh: string;
-  sourceType: string;      // e.g., "article-name.json" or "manual"
+  sourceType: 'article' | 'paragraph' | 'sentence';
+  articleId?: string;       // Article ID (when sourceType='article')
+  paragraphId?: string;     // Paragraph ID (for article/paragraph modes)
+  paragraphOrder?: number;  // Position of paragraph within article
+  order: number;            // Position of sentence within paragraph
+  createdAt: number;        // Creation timestamp
   userTranslationZh?: UserTranslation;
   userTranslationEn?: UserTranslation;
+  practiceStats?: PracticeStats;
 }
 ```
 
-- Data stored in `public/sentences.json`
+- Data stored in `public/data/sentences.json`
 - Auto-migrates from Articles if sentence database is empty
-- Sidebar groups sentences by `sourceType`
+- Sidebar supports three display modes via `SidebarDisplayMode`
+
+### Sidebar Display Modes
+
+`SidebarDisplayMode: 'flat' | 'by-article' | 'by-paragraph'`
+
+- **flat**: All sentences in chronological order (newest first)
+- **by-article**: Group list view → click to drill into article's sentences
+- **by-paragraph**: Group list view → click to drill into paragraph's sentences
+
+Uses progressive disclosure pattern - clicking a group sets `contextFilter` to show that group's sentences with a back button.
 
 ### Hotkey System
 Hotkeys are configurable via Settings. Defaults defined in `constants.tsx` (`AVAILABLE_COMMANDS`). The `PracticeSession` component handles keyboard events with `matchesHotkey()` helper.
@@ -200,3 +217,4 @@ The app includes a generic LLM platform for AI-powered features like intelligent
 - **Soft Delete Pattern**: Delete operations use 5-second timeout + undo. Store pending deletes in a ref, not state, to avoid re-render issues.
 - **Port conflicts**: Vite dev server auto-increments port if 3000 is in use. Check terminal output for actual port.
 - **ArticleList unused**: Despite being in codebase, `ArticleList.tsx` is not rendered. `SentenceMode.tsx` is the actual home view.
+- **ModelSelector TypeScript error**: `components/settings/ModelSelector.tsx` has a pre-existing TS error (`Property 'filter' does not exist on type 'unknown'`). This doesn't block builds but shows in `tsc --noEmit`.

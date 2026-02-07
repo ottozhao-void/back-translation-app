@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article } from '../types';
-import { fetchSentences, saveSentences } from '../utils/sentenceLoader';
+import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode } from '../types';
+import { fetchSentences, saveSentences, migrateAllSentences } from '../utils/sentenceLoader';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
-import { SentenceSidebar } from '../components/sentence-mode/SentenceSidebar';
+import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
+import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { SidebarCollapseIcon, SidebarExpandIcon } from '../components/Icons';
 import { AVAILABLE_COMMANDS } from '../constants';
@@ -43,6 +44,15 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
   const [isLoading, setIsLoading] = useState(true);
+
+  // View mode: 'detail' shows SentenceDetailView, 'practice' shows SentencePracticeArea
+  const [viewMode, setViewMode] = useState<'detail' | 'practice'>('detail');
+
+  // Context filter for sidebar (paragraph/article filtering)
+  const [contextFilter, setContextFilter] = useState<ContextFilter | null>(null);
+
+  // Sidebar display mode (flat, by-article, by-paragraph)
+  const [sidebarDisplayMode, setSidebarDisplayMode] = useState<SidebarDisplayMode>('flat');
 
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
@@ -95,6 +105,17 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           }
         }
 
+        // Migrate legacy data format to new hierarchical format
+        const needsMigration = data.some(s =>
+          !['article', 'paragraph', 'sentence'].includes(s.sourceType)
+        );
+        if (needsMigration) {
+          console.log('Migrating legacy sentence data to new format...');
+          data = migrateAllSentences(data);
+          await saveSentences(data);
+          console.log('Migration complete');
+        }
+
         setSentences(data);
       } catch (error) {
         console.error('Failed to load sentences:', error);
@@ -108,28 +129,90 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // Get currently selected sentence
   const currentSentence = sentences.find(s => s.id === selectedId) || null;
 
-  // Handle sentence selection
+  // Handle sentence selection - reset to detail view
   const handleSelectSentence = (id: string) => {
     setSelectedId(id);
+    setViewMode('detail'); // Always show detail view when selecting a new sentence
   };
+
+  // Handle starting practice from detail view
+  const handleStartPractice = useCallback(() => {
+    setViewMode('practice');
+  }, []);
+
+  // Handle returning to detail view from practice
+  const handleBackToDetail = useCallback(() => {
+    setViewMode('detail');
+  }, []);
+
+  // Handle context filter - show paragraph or article sentences
+  const handleShowParagraphContext = useCallback(() => {
+    const sentence = sentences.find(s => s.id === selectedId);
+    if (sentence?.paragraphId) {
+      setContextFilter({
+        type: 'paragraph',
+        id: sentence.paragraphId,
+        label: 'Paragraph Context',
+      });
+    }
+  }, [sentences, selectedId]);
+
+  const handleShowArticleContext = useCallback(() => {
+    const sentence = sentences.find(s => s.id === selectedId);
+    if (sentence?.articleId) {
+      setContextFilter({
+        type: 'article',
+        id: sentence.articleId,
+        label: 'Article Context',
+      });
+    }
+  }, [sentences, selectedId]);
+
+  const handleClearContextFilter = useCallback(() => {
+    setContextFilter(null);
+  }, []);
 
   // Handle mode toggle
   const handleModeToggle = () => {
     setPracticeMode(prev => prev === 'EN_TO_ZH' ? 'ZH_TO_EN' : 'EN_TO_ZH');
   };
 
-  // Handle translation submit
-  const handleSubmit = async (sentenceId: string, translation: UserTranslation) => {
+  // Handle translation submit - with practice stats tracking
+  const handleSubmit = async (sentenceId: string, translation: UserTranslation, durationMs?: number) => {
     setSentences(prev => {
       const updated = prev.map(s => {
         if (s.id !== sentenceId) return s;
 
-        const updatedSentence = { ...s, lastPracticed: Date.now() };
+        const now = Date.now();
+        const updatedSentence = { ...s, lastPracticed: now };
+
+        // Update translation
         if (practiceMode === 'EN_TO_ZH') {
           updatedSentence.userTranslationZh = translation;
         } else {
           updatedSentence.userTranslationEn = translation;
         }
+
+        // Update practice stats if this is a real submission (not draft)
+        if (translation.type !== 'draft' && durationMs && durationMs > 0) {
+          const existingStats = s.practiceStats || {
+            attempts: 0,
+            totalTimeMs: 0,
+          };
+
+          const newStats: PracticeStats = {
+            attempts: existingStats.attempts + 1,
+            totalTimeMs: existingStats.totalTimeMs + durationMs,
+            lastAttemptMs: durationMs,
+            lastPracticedAt: now,
+            bestTimeMs: existingStats.bestTimeMs
+              ? Math.min(existingStats.bestTimeMs, durationMs)
+              : durationMs,
+          };
+
+          updatedSentence.practiceStats = newStats;
+        }
+
         return updatedSentence;
       });
 
@@ -137,6 +220,11 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
       saveSentences(updated);
       return updated;
     });
+
+    // Return to detail view after submission (if not a draft)
+    if (translation.type !== 'draft') {
+      setViewMode('detail');
+    }
   };
 
   // Handle import success - add new sentences to state
@@ -197,6 +285,15 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     };
   }, []);
 
+  // Handle updating a sentence (for editing EN/ZH text)
+  const handleUpdateSentence = useCallback(async (id: string, updates: Partial<SentencePair>) => {
+    setSentences(prev => {
+      const updated = prev.map(s => s.id === id ? { ...s, ...updates } : s);
+      saveSentences(updated);
+      return updated;
+    });
+  }, []);
+
   if (isLoading) {
     return <LoadingSpinner text="Loading sentences..." />;
   }
@@ -215,6 +312,11 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onImport={() => setShowImportModal(true)}
         onDeleteSentence={handleDeleteSentence}
         isCollapsed={sidebarCollapsed}
+        contextFilter={contextFilter}
+        onClearContextFilter={handleClearContextFilter}
+        onSetContextFilter={setContextFilter}
+        displayMode={sidebarDisplayMode}
+        onDisplayModeChange={setSidebarDisplayMode}
       />
 
       {/* Sidebar Toggle Button - Outside sidebar, on the right edge */}
@@ -231,14 +333,39 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         </div>
       </button>
 
-      {/* Practice Area */}
-      <SentencePracticeArea
-        sentence={currentSentence}
-        practiceMode={practiceMode}
-        onModeToggle={handleModeToggle}
-        onSubmit={handleSubmit}
-        appSettings={appSettings}
-      />
+      {/* Main Content Area - Detail View or Practice Area */}
+      {currentSentence ? (
+        viewMode === 'detail' ? (
+          <SentenceDetailView
+            sentence={currentSentence}
+            practiceMode={practiceMode}
+            allSentences={sentences}
+            onStartPractice={handleStartPractice}
+            onShowParagraphContext={handleShowParagraphContext}
+            onShowArticleContext={handleShowArticleContext}
+            onModeToggle={handleModeToggle}
+            onUpdateSentence={handleUpdateSentence}
+            hideReferenceInDetailView={appSettings.hideReferenceInDetailView ?? true}
+          />
+        ) : (
+          <SentencePracticeArea
+            sentence={currentSentence}
+            practiceMode={practiceMode}
+            onModeToggle={handleModeToggle}
+            onSubmit={handleSubmit}
+            appSettings={appSettings}
+            onBack={handleBackToDetail}
+          />
+        )
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center" style={{ color: 'var(--text-secondary)' }}>
+            <div className="text-4xl mb-4">📚</div>
+            <p className="text-lg">Select a sentence to start practicing</p>
+            <p className="text-sm mt-2">Or add new content from the sidebar</p>
+          </div>
+        </div>
+      )}
 
       {/* Import Modal */}
       {showImportModal && (

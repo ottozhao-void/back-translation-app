@@ -42,6 +42,7 @@ export interface AppSettings {
   hotkeys: { [commandId: string]: string };
   practiceGranularity: 'sentence' | 'paragraph';  // Default: 'sentence'
   llm?: LLMSettings;  // LLM platform settings (optional for backward compatibility)
+  hideReferenceInDetailView?: boolean;  // Hide reference translation in detail view before practice
 }
 
 // --- Storage Keys ---
@@ -54,18 +55,43 @@ export const STORAGE_KEYS = {
 // === Sentence Mode Types ===
 
 /**
+ * 练习统计数据
+ * Tracks practice performance metrics for a sentence
+ */
+export interface PracticeStats {
+  attempts: number;           // Total practice attempts
+  totalTimeMs: number;        // Cumulative time spent (milliseconds)
+  bestTimeMs?: number;        // Personal best time
+  lastAttemptMs?: number;     // Duration of last attempt
+  lastPracticedAt?: number;   // Timestamp of last practice
+}
+
+/**
+ * 导入来源类型
+ * Defines how the sentence was imported and its hierarchical context
+ */
+export type SourceType = 'article' | 'paragraph' | 'sentence';
+
+/**
  * 回译对 - 系统的基本单元
  * A sentence pair is the fundamental unit for translation practice
+ *
+ * Hierarchy:
+ * - article mode: articleId + paragraphId + paragraphOrder + order (full hierarchy)
+ * - paragraph mode: paragraphId + order (single paragraph context)
+ * - sentence mode: standalone sentences (batch import or manual)
  */
 export interface SentencePair {
-  id: string;                    // Unique ID, format: {articleId}_{paragraphId}_s{index} or manual_{timestamp}_{suffix}
+  id: string;                    // Unique ID (UUID/nanoid)
   en: string;                    // English text
   zh: string;                    // Chinese text
 
-  // Source information
-  sourceType: string;            // Source identifier: articleId | 'manual' | custom tag
-  sourceIndex?: number;          // Order index in original text (only for article-derived)
-  paragraphId?: string;          // Parent paragraph ID (only for article-derived)
+  // Hierarchical relationship fields
+  sourceType: SourceType;        // Import mode: 'article' | 'paragraph' | 'sentence'
+  articleId?: string;            // Article ID (only when sourceType='article')
+  paragraphId?: string;          // Paragraph ID (when sourceType='article' or 'paragraph')
+  paragraphOrder?: number;       // Position of paragraph within article (only for article mode)
+  order: number;                 // Position of sentence within paragraph (-1 for sentence mode)
 
   // User practice data
   userTranslationZh?: UserTranslation;  // EN->ZH mode user translation
@@ -74,7 +100,11 @@ export interface SentencePair {
   // Metadata
   createdAt: number;             // Creation timestamp
   lastPracticed?: number;        // Last practice timestamp
-  tags?: string[];               // User-defined tags (optional, for future extension)
+  tags?: string[];               // User-defined tags for filtering
+  practiceStats?: PracticeStats; // Practice performance metrics
+
+  // Legacy field (for migration compatibility)
+  sourceIndex?: number;          // @deprecated Use 'order' instead
 }
 
 /**
@@ -90,10 +120,19 @@ export interface SentenceStore {
  * Filter/grouping options for sentences
  */
 export type SentenceFilterType =
-  | { type: 'article'; articleId: string }   // Filter by article
-  | { type: 'time'; order: 'asc' | 'desc' }  // Sort by time
-  | { type: 'random'; count?: number }       // Random selection
-  | { type: 'tag'; tag: string };            // Filter by tag (reserved)
+  | { type: 'all' }                              // All sentences
+  | { type: 'sourceType'; sourceType: SourceType } // Filter by source type
+  | { type: 'article'; articleId: string }       // Filter by article
+  | { type: 'paragraph'; paragraphId: string }   // Filter by paragraph
+  | { type: 'time'; order: 'asc' | 'desc' }      // Sort by time
+  | { type: 'random'; count?: number }           // Random selection
+  | { type: 'tag'; tag: string };                // Filter by tag
+
+/**
+ * Sidebar 显示模式
+ * Controls how sentences are displayed in the sidebar
+ */
+export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph';
 
 // === LLM Platform Types ===
 

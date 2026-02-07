@@ -1,79 +1,6 @@
 import React, { useState } from 'react';
-import { SentencePair, PracticeMode } from '../../types';
+import { SentencePair, PracticeMode, SidebarDisplayMode } from '../../types';
 import { ArrowLeftIcon } from '../Icons';
-
-// Helper to get source display name
-const getSourceDisplayName = (sourceType: string): string => {
-  if (sourceType === 'manual') return 'Manual Entries';
-  // Extract readable name from article ID (e.g., "1766636093980_the_essence.json" -> "The Essence")
-  const match = sourceType.match(/_([^.]+)/);
-  if (match) {
-    return match[1]
-      .split('_')
-      .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(' ');
-  }
-  return sourceType;
-};
-
-// Progress indicator component
-const ProgressDots: React.FC<{ practiced: number; total: number }> = ({ practiced, total }) => {
-  const percentage = total > 0 ? (practiced / total) * 100 : 0;
-  let status: 'none' | 'partial' | 'complete' = 'none';
-  if (percentage >= 80) status = 'complete';
-  else if (percentage > 0) status = 'partial';
-
-  const colors = {
-    none: 'bg-gray-500/30',
-    partial: 'bg-yellow-500/60',
-    complete: 'bg-emerald-500/60'
-  };
-
-  return (
-    <div className="flex gap-1">
-      <div className={`w-2 h-2 rounded-full ${colors[status]}`} />
-      <div className={`w-2 h-2 rounded-full ${percentage >= 50 ? colors[status] : 'bg-gray-500/30'}`} />
-    </div>
-  );
-};
-
-interface SourceCardProps {
-  sourceType: string;
-  sentences: SentencePair[];
-  practiceMode: PracticeMode;
-  onClick: () => void;
-}
-
-const SourceCard: React.FC<SourceCardProps> = ({ sourceType, sentences, practiceMode, onClick }) => {
-  const practicedCount = sentences.filter(s => {
-    const translation = practiceMode === 'EN_TO_ZH' ? s.userTranslationZh : s.userTranslationEn;
-    return translation && translation.type !== 'draft';
-  }).length;
-
-  const icon = sourceType === 'manual' ? '✏️' : '📄';
-
-  return (
-    <button
-      onClick={onClick}
-      className="w-full text-left p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--glass-bg)] hover:bg-[var(--surface-hover)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg group"
-    >
-      <div className="flex items-start gap-3">
-        <span className="text-lg">{icon}</span>
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate" style={{ color: 'var(--text-main)' }}>
-            {getSourceDisplayName(sourceType)}
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-              {sentences.length} sentences
-            </span>
-            <ProgressDots practiced={practicedCount} total={sentences.length} />
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-};
 
 interface SentenceItemProps {
   sentence: SentencePair;
@@ -144,6 +71,13 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
   );
 };
 
+// Context filter for paragraph/article filtering
+export interface ContextFilter {
+  type: 'paragraph' | 'article';
+  id: string;
+  label: string;
+}
+
 interface SentenceSidebarProps {
   sentences: SentencePair[];
   selectedId: string | null;
@@ -153,11 +87,75 @@ interface SentenceSidebarProps {
   onDeleteSentence?: (id: string) => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  contextFilter?: ContextFilter | null;
+  onClearContextFilter?: () => void;
+  onSetContextFilter?: (filter: ContextFilter) => void;
+  displayMode: SidebarDisplayMode;
+  onDisplayModeChange: (mode: SidebarDisplayMode) => void;
 }
 
-type SidebarLevel =
-  | { level: 'sources' }
-  | { level: 'sentences'; sourceType: string };
+// View mode selector component
+const ViewModeSelector: React.FC<{
+  mode: SidebarDisplayMode;
+  onChange: (mode: SidebarDisplayMode) => void;
+}> = ({ mode, onChange }) => {
+  const modes: { value: SidebarDisplayMode; label: string; icon: string }[] = [
+    { value: 'flat', label: 'Flat', icon: '☰' },
+    { value: 'by-article', label: 'Article', icon: '📄' },
+    { value: 'by-paragraph', label: 'Paragraph', icon: '¶' },
+  ];
+
+  return (
+    <div className="flex gap-1 p-1 rounded-lg" style={{ backgroundColor: 'var(--surface-hover)' }}>
+      {modes.map(({ value, label, icon }) => (
+        <button
+          key={value}
+          onClick={() => onChange(value)}
+          className={`flex-1 px-2 py-1 text-xs rounded-md transition-all ${
+            mode === value
+              ? 'bg-[var(--bg-main)] shadow-sm'
+              : 'hover:bg-[var(--bg-main)]/50'
+          }`}
+          style={{ color: mode === value ? 'var(--text-main)' : 'var(--text-secondary)' }}
+          title={label}
+        >
+          <span className="mr-1">{icon}</span>
+          <span className="hidden sm:inline">{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+};
+
+// Group header component for article/paragraph groups - click to drill down
+const GroupItem: React.FC<{
+  label: string;
+  count: number;
+  onClick: () => void;
+}> = ({ label, count, onClick }) => (
+  <button
+    onClick={onClick}
+    className="w-full px-3 py-3 flex items-center justify-between hover:bg-[var(--surface-hover)] transition-colors border-b border-[var(--glass-border)]/30"
+  >
+    <div className="flex items-center gap-2 min-w-0">
+      <span
+        className="text-sm font-medium truncate"
+        style={{ color: 'var(--text-main)' }}
+      >
+        {label}
+      </span>
+    </div>
+    <div className="flex items-center gap-2">
+      <span
+        className="text-xs px-1.5 py-0.5 rounded-full"
+        style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-secondary)' }}
+      >
+        {count}
+      </span>
+      <span style={{ color: 'var(--text-secondary)' }}>›</span>
+    </div>
+  </button>
+);
 
 export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   sentences,
@@ -167,35 +165,97 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   onImport,
   onDeleteSentence,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  contextFilter,
+  onClearContextFilter,
+  onSetContextFilter,
+  displayMode,
+  onDisplayModeChange,
 }) => {
-  const [sidebarState, setSidebarState] = useState<SidebarLevel>({ level: 'sources' });
   const [contextMenu, setContextMenu] = useState<{ id: string; x: number; y: number } | null>(null);
 
-  // Group sentences by sourceType
-  const groupedSentences = React.useMemo(() => {
-    const groups = new Map<string, SentencePair[]>();
-    for (const sentence of sentences) {
-      const key = sentence.sourceType;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(sentence);
+  // Get displayed sentences - either filtered by context or all sentences
+  const displayedSentences = React.useMemo(() => {
+    if (!contextFilter) {
+      // Default: show all sentences sorted by creation time (newest first)
+      return [...sentences].sort((a, b) => b.createdAt - a.createdAt);
     }
+
+    if (contextFilter.type === 'paragraph') {
+      // For paragraph context, sort by sentence order within paragraph
+      return sentences
+        .filter(s => s.paragraphId === contextFilter.id)
+        .sort((a, b) => a.order - b.order);
+    }
+    if (contextFilter.type === 'article') {
+      // For article context, sort by paragraphOrder first, then by sentence order
+      return sentences
+        .filter(s => s.articleId === contextFilter.id)
+        .sort((a, b) => {
+          // First compare by paragraph order (position of paragraph in article)
+          const paraOrderA = a.paragraphOrder ?? 0;
+          const paraOrderB = b.paragraphOrder ?? 0;
+          if (paraOrderA !== paraOrderB) {
+            return paraOrderA - paraOrderB;
+          }
+          // Then compare by sentence order (position within paragraph)
+          return a.order - b.order;
+        });
+    }
+    return sentences;
+  }, [sentences, contextFilter]);
+
+  // Group sentences by article or paragraph for group list view
+  const groupList = React.useMemo(() => {
+    // Only show group list when in grouped mode AND no context filter is active
+    if (displayMode === 'flat' || contextFilter) {
+      return null;
+    }
+
+    const groups = new Map<string, { label: string; count: number }>();
+
+    if (displayMode === 'by-article') {
+      sentences.forEach(s => {
+        const groupId = s.articleId || 'ungrouped';
+        const label = s.articleId || 'Standalone';
+        if (!groups.has(groupId)) {
+          groups.set(groupId, { label, count: 0 });
+        }
+        groups.get(groupId)!.count++;
+      });
+    } else if (displayMode === 'by-paragraph') {
+      sentences.forEach(s => {
+        const groupId = s.paragraphId || 'ungrouped';
+        const label = s.paragraphId
+          ? `¶ ${s.paragraphId.slice(0, 12)}...`
+          : 'Standalone';
+        if (!groups.has(groupId)) {
+          groups.set(groupId, { label, count: 0 });
+        }
+        groups.get(groupId)!.count++;
+      });
+    }
+
     return groups;
-  }, [sentences]);
+  }, [sentences, displayMode, contextFilter]);
 
-  const sourceTypes: string[] = Array.from(groupedSentences.keys());
-  const currentSentences = sidebarState.level === 'sentences'
-    ? groupedSentences.get(sidebarState.sourceType) || []
-    : [];
+  // Handle clicking a group to drill down
+  const handleGroupClick = (groupId: string, label: string) => {
+    if (!onSetContextFilter) return;
 
-  const handleSourceClick = (sourceType: string) => {
-    setSidebarState({ level: 'sentences', sourceType });
-  };
-
-  const handleBack = () => {
-    setSidebarState({ level: 'sources' });
+    if (displayMode === 'by-article') {
+      onSetContextFilter({
+        type: 'article',
+        id: groupId === 'ungrouped' ? '' : groupId,
+        label,
+      });
+    } else if (displayMode === 'by-paragraph') {
+      onSetContextFilter({
+        type: 'paragraph',
+        id: groupId === 'ungrouped' ? '' : groupId,
+        label,
+      });
+    }
   };
 
   // Close context menu when clicking outside
@@ -226,8 +286,6 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
     setContextMenu(null);
   };
 
-  const isSourcesView = sidebarState.level === 'sources';
-
   // Collapsed state - show only minimal content
   if (isCollapsed) {
     return (
@@ -250,56 +308,58 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
       {/* Header */}
       <div className="p-4 border-b border-[var(--glass-border)] flex-shrink-0">
         <div className="min-w-0">
-          {isSourcesView ? (
-            <h2 className="text-sm font-mono uppercase tracking-widest truncate" style={{ color: 'var(--text-secondary)' }}>
-              Sources
-            </h2>
-          ) : (
+          {contextFilter ? (
             <button
-              onClick={handleBack}
+              onClick={onClearContextFilter}
               className="flex items-center gap-2 text-sm hover:opacity-80 transition-opacity max-w-full"
               style={{ color: 'var(--text-main)' }}
             >
               <ArrowLeftIcon />
-              <span className="truncate">{getSourceDisplayName(sidebarState.sourceType)}</span>
+              <span className="truncate">{contextFilter.label}</span>
             </button>
+          ) : (
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-mono uppercase tracking-widest truncate" style={{ color: 'var(--text-secondary)' }}>
+                All Sentences
+              </h2>
+              <span
+                className="text-xs px-1.5 py-0.5 rounded-full ml-2 flex-shrink-0"
+                style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-secondary)' }}
+              >
+                {displayedSentences.length}
+              </span>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Content with slide animation */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Sources View (Level 1) */}
-        <div
-          className={`absolute inset-0 overflow-y-auto custom-scrollbar p-4 space-y-3 transition-transform duration-300 ease-out ${
-            isSourcesView ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          {sourceTypes.length === 0 ? (
-            <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
-              <p className="text-sm">No sentences yet.</p>
-              <p className="text-xs mt-2">Add sentences or import from articles.</p>
-            </div>
-          ) : (
-            sourceTypes.map(sourceType => (
-              <SourceCard
-                key={sourceType}
-                sourceType={sourceType}
-                sentences={groupedSentences.get(sourceType) || []}
-                practiceMode={practiceMode}
-                onClick={() => handleSourceClick(sourceType)}
-              />
-            ))
-          )}
+      {/* View Mode Selector - Only show when not in context filter mode */}
+      {!contextFilter && (
+        <div className="px-4 py-2 border-b border-[var(--glass-border)] flex-shrink-0">
+          <ViewModeSelector mode={displayMode} onChange={onDisplayModeChange} />
         </div>
+      )}
 
-        {/* Sentences View (Level 2) */}
-        <div
-          className={`absolute inset-0 overflow-y-auto custom-scrollbar transition-transform duration-300 ease-out ${
-            isSourcesView ? 'translate-x-full' : 'translate-x-0'
-          }`}
-        >
-          {currentSentences.map((sentence: SentencePair, index: number) => (
+      {/* Content - Flat sentence list or Group list */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        {sentences.length === 0 ? (
+          <div className="text-center py-8" style={{ color: 'var(--text-secondary)' }}>
+            <p className="text-sm">No sentences yet.</p>
+            <p className="text-xs mt-2">Click Import to add sentences.</p>
+          </div>
+        ) : groupList ? (
+          // Group list view (by-article or by-paragraph mode without context filter)
+          Array.from(groupList.entries()).map(([groupId, { label, count }]) => (
+            <GroupItem
+              key={groupId}
+              label={label}
+              count={count}
+              onClick={() => handleGroupClick(groupId, label)}
+            />
+          ))
+        ) : (
+          // Flat display or filtered context view
+          displayedSentences.map((sentence: SentencePair, index: number) => (
             <SentenceItem
               key={sentence.id}
               sentence={sentence}
@@ -310,8 +370,8 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               onContextMenu={(e) => handleContextMenu(e, sentence.id)}
               onMenuClick={(e) => handleMenuClick(e, sentence.id)}
             />
-          ))}
-        </div>
+          ))
+        )}
       </div>
 
       {/* Context Menu */}
@@ -339,26 +399,24 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
         </div>
       )}
 
-      {/* Footer with progress (Level 2 only) */}
-      {!isSourcesView && (
+      {/* Footer with progress - only show position when sentence is selected */}
+      {selectedId && (
         <div className="p-3 border-t border-[var(--glass-border)] text-center text-xs" style={{ color: 'var(--text-secondary)' }}>
-          {currentSentences.findIndex(s => s.id === selectedId) + 1} / {currentSentences.length}
+          {displayedSentences.findIndex(s => s.id === selectedId) + 1} / {displayedSentences.length}
         </div>
       )}
 
-      {/* Action Button (Level 1 only) */}
-      {isSourcesView && (
-        <div className="p-4 border-t border-[var(--glass-border)] flex-shrink-0">
-          <button
-            onClick={onImport}
-            className="w-full py-2 px-4 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
-            style={{ color: 'var(--text-main)' }}
-          >
-            <span>+</span>
-            <span>Import</span>
-          </button>
-        </div>
-      )}
+      {/* Import Button - Always visible */}
+      <div className="p-4 border-t border-[var(--glass-border)] flex-shrink-0">
+        <button
+          onClick={onImport}
+          className="w-full py-2 px-4 rounded-lg text-sm font-medium border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] transition-colors flex items-center justify-center gap-2"
+          style={{ color: 'var(--text-main)' }}
+        >
+          <span>+</span>
+          <span>Import</span>
+        </button>
+      </div>
     </div>
   );
 };

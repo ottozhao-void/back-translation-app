@@ -18,6 +18,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
     const [llmThreshold, setLlmThreshold] = useState(settings.llmThreshold);
     const [hotkeys, setHotkeys] = useState(settings.hotkeys || {});
     const [practiceGranularity, setPracticeGranularity] = useState<'sentence' | 'paragraph'>(settings.practiceGranularity || 'sentence');
+    const [hideReferenceInDetailView, setHideReferenceInDetailView] = useState(settings.hideReferenceInDetailView ?? true);
     const [recordingCommandId, setRecordingCommandId] = useState<string | null>(null);
 
     const handleSave = () => {
@@ -28,7 +29,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
             },
             llmThreshold,
             hotkeys,
-            practiceGranularity
+            practiceGranularity,
+            hideReferenceInDetailView,
         });
         onClose();
     };
@@ -198,6 +200,20 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ settings, onUpdate
                                         className={`w-12 h-6 rounded-full transition-colors relative ${practiceGranularity === 'paragraph' ? 'bg-emerald-500' : 'bg-gray-600'}`}
                                     >
                                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${practiceGranularity === 'paragraph' ? 'left-7' : 'left-1'}`} />
+                                    </button>
+                                </div>
+
+                                {/* Setting Item: Hide Reference in Detail View */}
+                                <div className="flex items-center justify-between p-4 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-hover)]/10">
+                                    <div className="flex flex-col gap-1">
+                                        <span className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>Hide Reference Before Practice</span>
+                                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>Hide the reference translation in sentence detail view to avoid spoilers</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setHideReferenceInDetailView(!hideReferenceInDetailView)}
+                                        className={`w-12 h-6 rounded-full transition-colors relative ${hideReferenceInDetailView ? 'bg-emerald-500' : 'bg-gray-600'}`}
+                                    >
+                                        <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${hideReferenceInDetailView ? 'left-7' : 'left-1'}`} />
                                     </button>
                                 </div>
 

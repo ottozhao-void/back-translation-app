@@ -1,5 +1,17 @@
-import { SentencePair, SentenceStore, SentenceFilterType, Article } from '../types';
+import { SentencePair, SentenceStore, SentenceFilterType, Article, SourceType } from '../types';
 import { splitParagraphToSentences } from './sentenceSplitter';
+
+// === ID Generation ===
+
+/**
+ * Generates a unique ID using timestamp + random suffix
+ * Format: prefix_timestamp_random (e.g., "sent_1234567890_a1b2")
+ */
+const generateId = (prefix: string = 'sent'): string => {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 6);
+  return `${prefix}_${timestamp}_${random}`;
+};
 
 /**
  * Fetches all sentences from the server
@@ -83,16 +95,16 @@ export const importFromArticle = async (article: Article): Promise<SentencePair[
 };
 
 /**
- * Adds a single manually-entered sentence
+ * Adds a single manually-entered sentence (sentence mode)
  */
 export const createManualSentence = (en: string, zh: string): SentencePair => {
   const timestamp = Date.now();
-  const suffix = Math.random().toString(36).substring(2, 6);
   return {
-    id: `manual_${timestamp}_${suffix}`,
+    id: generateId('sent'),
     en: en.trim(),
     zh: zh.trim(),
-    sourceType: 'manual',
+    sourceType: 'sentence',
+    order: -1,  // No order for standalone sentences
     createdAt: timestamp,
   };
 };
@@ -161,8 +173,17 @@ export const filterSentences = (
   filter: SentenceFilterType
 ): SentencePair[] => {
   switch (filter.type) {
+    case 'all':
+      return sentences;
+
+    case 'sourceType':
+      return sentences.filter(s => s.sourceType === filter.sourceType);
+
     case 'article':
-      return sentences.filter(s => s.sourceType === filter.articleId);
+      return sentences.filter(s => s.articleId === filter.articleId);
+
+    case 'paragraph':
+      return sentences.filter(s => s.paragraphId === filter.paragraphId);
 
     case 'time':
       const sorted = [...sentences].sort((a, b) =>
@@ -203,9 +224,147 @@ export const groupBySource = (
   return groups;
 };
 
+/**
+ * Gets all sentences belonging to the same paragraph as the given sentence
+ */
+export const getParagraphContext = (
+  sentence: SentencePair,
+  allSentences: SentencePair[]
+): SentencePair[] => {
+  if (!sentence.paragraphId) return [sentence];
+
+  return allSentences
+    .filter(s => s.paragraphId === sentence.paragraphId)
+    .sort((a, b) => a.order - b.order);
+};
+
+/**
+ * Gets all sentences belonging to the same article as the given sentence
+ */
+export const getArticleContext = (
+  sentence: SentencePair,
+  allSentences: SentencePair[]
+): SentencePair[] => {
+  if (!sentence.articleId) return [sentence];
+
+  return allSentences
+    .filter(s => s.articleId === sentence.articleId)
+    .sort((a, b) => a.order - b.order);
+};
+
+/**
+ * Groups sentences by paragraph within an article
+ */
+export const groupByParagraph = (
+  sentences: SentencePair[]
+): Map<string, SentencePair[]> => {
+  const groups = new Map<string, SentencePair[]>();
+
+  for (const sentence of sentences) {
+    const key = sentence.paragraphId || 'standalone';
+    if (!groups.has(key)) {
+      groups.set(key, []);
+    }
+    groups.get(key)!.push(sentence);
+  }
+
+  // Sort sentences within each paragraph by order
+  for (const [key, group] of groups) {
+    groups.set(key, group.sort((a, b) => a.order - b.order));
+  }
+
+  return groups;
+};
+
+// === Data Migration ===
+
+/**
+ * Extracts paragraph order from paragraphId format like "article-1.md_p0" -> 0
+ */
+const extractParagraphOrder = (paragraphId: string | undefined): number | undefined => {
+  if (!paragraphId) return undefined;
+  const match = paragraphId.match(/_p(\d+)$/);
+  return match ? parseInt(match[1], 10) : undefined;
+};
+
+/**
+ * Migrates legacy sentence data to the new hierarchical format
+ *
+ * Legacy format (from old article migration):
+ * - sourceType: "1766188879030_the_translator_s_guide_to_chinglish___forward.json" (article filename)
+ * - paragraphId: "article-1.md_p0" (contains paragraph order as _pN suffix)
+ * - sourceIndex: 0 (sentence order within paragraph)
+ *
+ * New format:
+ * - sourceType: 'article' | 'paragraph' | 'sentence'
+ * - articleId: the old sourceType value (article filename)
+ * - paragraphId: unchanged
+ * - paragraphOrder: extracted from paragraphId (e.g., _p0 -> 0)
+ * - order: sourceIndex or existing order
+ */
+export const migrateSentence = (sentence: SentencePair): SentencePair => {
+  const legacySourceType = sentence.sourceType as string;
+
+  // Already migrated - sourceType is one of the new valid values
+  if (['article', 'paragraph', 'sentence'].includes(legacySourceType)) {
+    // Ensure order field exists
+    if (sentence.order === undefined) {
+      return { ...sentence, order: sentence.sourceIndex ?? -1 };
+    }
+    return sentence;
+  }
+
+  // Check for legacy patterns
+  if (legacySourceType === 'manual' || legacySourceType === 'batch') {
+    return {
+      ...sentence,
+      sourceType: 'sentence',
+      order: -1,
+    };
+  }
+
+  if (legacySourceType.startsWith('paragraph_')) {
+    return {
+      ...sentence,
+      sourceType: 'paragraph',
+      paragraphId: sentence.paragraphId || legacySourceType,
+      order: sentence.sourceIndex ?? sentence.order ?? 0,
+    };
+  }
+
+  // Legacy article format: sourceType contains filename like "xxx.json"
+  // or starts with "article_"
+  if (legacySourceType.startsWith('article_') || legacySourceType.includes('.json')) {
+    const paragraphOrder = extractParagraphOrder(sentence.paragraphId);
+
+    return {
+      ...sentence,
+      sourceType: 'article',
+      articleId: sentence.articleId || legacySourceType,  // Preserve old sourceType as articleId
+      paragraphId: sentence.paragraphId || generateId('para'),
+      paragraphOrder: sentence.paragraphOrder ?? paragraphOrder,  // Extract from paragraphId
+      order: sentence.sourceIndex ?? sentence.order ?? 0,
+    };
+  }
+
+  // Default: treat as standalone sentence
+  return {
+    ...sentence,
+    sourceType: 'sentence',
+    order: -1,
+  };
+};
+
+/**
+ * Migrates all sentences in the store to the new format
+ */
+export const migrateAllSentences = (sentences: SentencePair[]): SentencePair[] => {
+  return sentences.map(migrateSentence);
+};
+
 // === Batch Import Types and Functions ===
 
-export type ImportMode = 'batch' | 'paragraph' | 'article';
+export type ImportMode = 'article' | 'paragraph' | 'sentence';
 
 export interface ImportResult {
   success: boolean;
@@ -214,10 +373,11 @@ export interface ImportResult {
 }
 
 /**
- * Creates sentence pairs from batch import (line-by-line)
+ * Creates sentence pairs from sentence mode (batch/line-by-line import)
  * Each line in enLines corresponds to the same index in zhLines
+ * These are standalone sentences with no paragraph/article context
  */
-export const createBatchSentences = (
+export const createSentenceModePairs = (
   enLines: string[],
   zhLines: string[]
 ): SentencePair[] => {
@@ -227,11 +387,11 @@ export const createBatchSentences = (
 
   for (let i = 0; i < maxLen; i++) {
     pairs.push({
-      id: `batch_${timestamp}_${i}`,
+      id: generateId('sent'),
       en: enLines[i]?.trim() || '',
       zh: zhLines[i]?.trim() || '',
-      sourceType: 'batch',
-      sourceIndex: i,
+      sourceType: 'sentence',
+      order: -1,  // No order for standalone sentences
       createdAt: timestamp,
     });
   }
@@ -240,56 +400,101 @@ export const createBatchSentences = (
 };
 
 /**
- * Creates sentence pairs from paragraph import (auto-split)
+ * Creates sentence pairs from paragraph mode (single paragraph import)
+ * All sentences share the same paragraphId
+ */
+export const createParagraphModePairs = (
+  enSentences: string[],
+  zhSentences: string[]
+): SentencePair[] => {
+  const timestamp = Date.now();
+  const paragraphId = generateId('para');
+  const maxLen = Math.max(enSentences.length, zhSentences.length);
+  const pairs: SentencePair[] = [];
+
+  for (let i = 0; i < maxLen; i++) {
+    pairs.push({
+      id: generateId('sent'),
+      en: enSentences[i]?.trim() || '',
+      zh: zhSentences[i]?.trim() || '',
+      sourceType: 'paragraph',
+      paragraphId,
+      order: i,
+      createdAt: timestamp,
+    });
+  }
+
+  return pairs;
+};
+
+/**
+ * Paragraph data for article mode import
+ */
+export interface ParagraphData {
+  enSentences: string[];
+  zhSentences: string[];
+}
+
+/**
+ * Creates sentence pairs from article mode (multi-paragraph import)
+ * All sentences share the same articleId, grouped by paragraphId
+ *
+ * Ordering:
+ * - paragraphOrder: position of paragraph within article (0, 1, 2...)
+ * - order: position of sentence within paragraph (0, 1, 2...)
+ */
+export const createArticleModePairs = (
+  paragraphs: ParagraphData[]
+): SentencePair[] => {
+  const timestamp = Date.now();
+  const articleId = generateId('art');
+  const pairs: SentencePair[] = [];
+
+  for (let paragraphIndex = 0; paragraphIndex < paragraphs.length; paragraphIndex++) {
+    const paragraph = paragraphs[paragraphIndex];
+    const paragraphId = generateId('para');
+    const maxLen = Math.max(paragraph.enSentences.length, paragraph.zhSentences.length);
+
+    for (let sentenceIndex = 0; sentenceIndex < maxLen; sentenceIndex++) {
+      pairs.push({
+        id: generateId('sent'),
+        en: paragraph.enSentences[sentenceIndex]?.trim() || '',
+        zh: paragraph.zhSentences[sentenceIndex]?.trim() || '',
+        sourceType: 'article',
+        articleId,
+        paragraphId,
+        paragraphOrder: paragraphIndex,  // Position of paragraph in article
+        order: sentenceIndex,            // Position of sentence in paragraph
+        createdAt: timestamp,
+      });
+    }
+  }
+
+  return pairs;
+};
+
+// === Legacy compatibility (deprecated, use new functions above) ===
+
+/**
+ * @deprecated Use createSentenceModePairs instead
+ */
+export const createBatchSentences = createSentenceModePairs;
+
+/**
+ * @deprecated Use createParagraphModePairs instead
  */
 export const createParagraphSentences = (
   enSentences: string[],
   zhSentences: string[]
-): SentencePair[] => {
-  const timestamp = Date.now();
-  const sourceType = `paragraph_${timestamp}`;
-  const maxLen = Math.max(enSentences.length, zhSentences.length);
-  const pairs: SentencePair[] = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    pairs.push({
-      id: `${sourceType}_s${i}`,
-      en: enSentences[i]?.trim() || '',
-      zh: zhSentences[i]?.trim() || '',
-      sourceType,
-      sourceIndex: i,
-      createdAt: timestamp,
-    });
-  }
-
-  return pairs;
-};
+): SentencePair[] => createParagraphModePairs(enSentences, zhSentences);
 
 /**
- * Creates sentence pairs from article import (auto-split with article context)
+ * @deprecated Use createArticleModePairs instead
  */
 export const createArticleSentences = (
   enSentences: string[],
   zhSentences: string[]
-): SentencePair[] => {
-  const timestamp = Date.now();
-  const sourceType = `article_${timestamp}`;
-  const maxLen = Math.max(enSentences.length, zhSentences.length);
-  const pairs: SentencePair[] = [];
-
-  for (let i = 0; i < maxLen; i++) {
-    pairs.push({
-      id: `${sourceType}_s${i}`,
-      en: enSentences[i]?.trim() || '',
-      zh: zhSentences[i]?.trim() || '',
-      sourceType,
-      sourceIndex: i,
-      createdAt: timestamp,
-    });
-  }
-
-  return pairs;
-};
+): SentencePair[] => createArticleModePairs([{ enSentences, zhSentences }]);
 
 /**
  * Adds multiple sentences to the store at once (batch operation)

@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { SentencePair, PracticeMode, UserTranslation, AppSettings } from '../../types';
-import { SpeakerIcon } from '../Icons';
+import { SpeakerIcon, ArrowLeftIcon } from '../Icons';
 import { playTextToSpeech } from '../../services/geminiService';
+import { usePracticeTimer } from '../../hooks/usePracticeTimer';
 
 interface SentencePracticeAreaProps {
   sentence: SentencePair | null;
   practiceMode: PracticeMode;
   onModeToggle: () => void;
-  onSubmit: (sentenceId: string, translation: UserTranslation) => void;
+  onSubmit: (sentenceId: string, translation: UserTranslation, durationMs?: number) => void;
   appSettings: AppSettings;
+  onBack?: () => void;
 }
 
 export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
@@ -16,7 +18,8 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   practiceMode,
   onModeToggle,
   onSubmit,
-  appSettings
+  appSettings,
+  onBack,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -26,6 +29,9 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastSavedText = useRef('');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Practice timer - don't auto-start, we'll control it manually
+  const { formatTime, stop: stopTimer, reset: resetTimer, restart: restartTimer } = usePracticeTimer(false);
 
   // Get source and target text based on mode
   const sourceText = sentence ? (practiceMode === 'EN_TO_ZH' ? sentence.en : sentence.zh) : '';
@@ -43,6 +49,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
       setIsSubmitted(false);
       setIsFlipped(false);
       lastSavedText.current = '';
+      resetTimer();
       return;
     }
 
@@ -59,12 +66,16 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     }
     setSaveStatus('saved');
 
+    // Use restart for atomic reset + start (stable reference, no setTimeout needed)
+    restartTimer();
+
     // Focus input after animation
     setTimeout(() => {
       if (!existingTranslation || existingTranslation.type === 'draft') {
         inputRef.current?.focus();
       }
     }, 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sentence?.id, practiceMode]);
 
   // Auto-save logic
@@ -100,13 +111,16 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   const handleSubmit = () => {
     if (!sentence || !inputValue.trim()) return;
 
+    // Stop timer and get duration
+    const duration = stopTimer();
+
     setIsSubmitted(true);
     setIsFlipped(true); // Flip to show reference
     onSubmit(sentence.id, {
       type: 'diff', // Simple mode - no LLM scoring
       text: inputValue,
       timestamp: Date.now()
-    });
+    }, duration);
     lastSavedText.current = inputValue;
   };
 
@@ -176,9 +190,19 @@ Please:
 
   return (
     <div className="flex-1 flex flex-col p-8 overflow-hidden">
-      {/* Mode Toggle - Visually Distinct */}
+      {/* Header with Back Button, Mode Toggle, and Timer */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-1 text-sm hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              <ArrowLeftIcon />
+              <span>Back</span>
+            </button>
+          )}
           <button
             onClick={onModeToggle}
             className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
@@ -191,15 +215,23 @@ Please:
             {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
           </button>
         </div>
-        {isSubmitted && (
-          <button
-            onClick={handleEdit}
-            className="text-sm hover:opacity-80 transition-opacity"
-            style={{ color: 'var(--text-secondary)' }}
-          >
-            Edit
-          </button>
-        )}
+        <div className="flex items-center gap-4">
+          {/* Timer Display */}
+          {!isSubmitted && (
+            <span className="text-sm font-mono px-3 py-1 rounded-lg" style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)' }}>
+              {formatTime()}
+            </span>
+          )}
+          {isSubmitted && (
+            <button
+              onClick={handleEdit}
+              className="text-sm hover:opacity-80 transition-opacity"
+              style={{ color: 'var(--text-secondary)' }}
+            >
+              Edit
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Content Area */}
