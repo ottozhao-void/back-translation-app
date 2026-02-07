@@ -9,6 +9,17 @@ import { getProviderConfig, getEffectiveParams } from './providers';
 import { buildSystemPrompt, buildUserMessage, parseTaskResponse } from './prompts';
 
 /**
+ * Strip markdown code fences from LLM response if present.
+ * Some models wrap JSON in ```json ... ``` even with json_object response format.
+ */
+function stripMarkdownCodeFences(content: string): string {
+  const trimmed = content.trim();
+  // Match ```json or ``` at start, and ``` at end
+  const fenceMatch = trimmed.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+  return fenceMatch ? fenceMatch[1].trim() : trimmed;
+}
+
+/**
  * Execute an LLM task
  */
 export async function executeLLMTask(request: LLMTaskRequest): Promise<LLMTaskResponse> {
@@ -106,10 +117,11 @@ export async function executeLLMTask(request: LLMTaskRequest): Promise<LLMTaskRe
       };
     }
 
-    // Parse JSON response
+    // Parse JSON response (strip markdown code fences if present)
     let parsedContent: unknown;
     try {
-      parsedContent = JSON.parse(content);
+      const cleanedContent = stripMarkdownCodeFences(content);
+      parsedContent = JSON.parse(cleanedContent);
     } catch {
       return {
         success: false,

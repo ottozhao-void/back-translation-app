@@ -1,6 +1,129 @@
 import { SentencePair, SentenceStore, SentenceFilterType, Article, SourceType } from '../types';
 import { splitParagraphToSentences } from './sentenceSplitter';
 
+// === Mobile-Optimized API Types ===
+
+/**
+ * Summary version of sentence for list views (mobile-optimized)
+ */
+export interface SentenceSummary {
+  id: string;
+  en: string;  // Truncated to 50 chars
+  zh: string;  // Truncated to 50 chars
+  sourceType: string;
+  articleId?: string;
+  paragraphId?: string;
+  hasUserTranslation: boolean;
+  lastPracticed?: number;
+  createdAt: number;
+}
+
+/**
+ * Response type for summary API
+ */
+export interface SentenceSummaryResponse {
+  success: boolean;
+  data: SentenceSummary[];
+  total: number;
+  error?: string;
+}
+
+/**
+ * Response type for single sentence API
+ */
+export interface SentenceDetailResponse {
+  success: boolean;
+  data?: SentencePair;
+  error?: string;
+}
+
+/**
+ * Response type for patch API
+ */
+export interface SentencePatchResponse {
+  success: boolean;
+  data?: SentencePair;
+  error?: string;
+}
+
+// === Mobile-Optimized API Functions ===
+
+/**
+ * Fetches sentence summaries (mobile-optimized, truncated content)
+ * Use this for list views to reduce data transfer
+ */
+export const fetchSentenceSummary = async (): Promise<SentenceSummaryResponse> => {
+  try {
+    const response = await fetch('/api/sentences/summary');
+    if (!response.ok) {
+      console.error('Failed to fetch sentence summary:', response.statusText);
+      return { success: false, data: [], total: 0, error: response.statusText };
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch sentence summary:', error);
+    return {
+      success: false,
+      data: [],
+      total: 0,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
+/**
+ * Fetches a single sentence by ID (full details)
+ * Use this when user selects a sentence for practice
+ */
+export const fetchSentenceById = async (id: string): Promise<SentenceDetailResponse> => {
+  try {
+    const response = await fetch(`/api/sentences/${encodeURIComponent(id)}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: 'Sentence not found' };
+      }
+      return { success: false, error: response.statusText };
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to fetch sentence:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
+/**
+ * Incrementally updates a single sentence (PATCH)
+ * Use this for mobile to avoid sending/receiving full sentence list
+ */
+export const patchSentence = async (
+  id: string,
+  updates: Partial<SentencePair>
+): Promise<SentencePatchResponse> => {
+  try {
+    const response = await fetch(`/api/sentences/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
+    if (!response.ok) {
+      if (response.status === 404) {
+        return { success: false, error: 'Sentence not found' };
+      }
+      return { success: false, error: response.statusText };
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Failed to patch sentence:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+};
+
 // === ID Generation ===
 
 /**

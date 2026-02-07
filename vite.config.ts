@@ -98,6 +98,123 @@ function setupMiddleware(middlewares: any) {
           }
 
           // === Sentence API Routes ===
+
+          // GET /api/sentences/summary - Mobile-optimized list
+          if (url.pathname === '/api/sentences/summary' && req.method === 'GET') {
+            try {
+              if (!fs.existsSync(sentencesFile)) {
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, data: [], total: 0 }));
+                return;
+              }
+
+              const content = fs.readFileSync(sentencesFile, 'utf-8');
+              const store = JSON.parse(content);
+
+              const summary = (store.sentences || []).map((s: any) => ({
+                id: s.id,
+                en: s.en ? (s.en.substring(0, 50) + (s.en.length > 50 ? '...' : '')) : '',
+                zh: s.zh ? (s.zh.substring(0, 50) + (s.zh.length > 50 ? '...' : '')) : '',
+                sourceType: s.sourceType,
+                articleId: s.articleId,
+                paragraphId: s.paragraphId,
+                hasUserTranslation: !!(s.userTranslationZh || s.userTranslationEn),
+                lastPracticed: s.lastPracticed,
+                createdAt: s.createdAt,
+              }));
+
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, data: summary, total: summary.length }));
+            } catch (e) {
+              console.error('Failed to get sentence summary:', e);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ success: false, error: 'Failed to get summary' }));
+            }
+            return;
+          }
+
+          // GET/PATCH /api/sentences/:id - Single sentence operations
+          const sentenceIdMatch = url.pathname.match(/^\/api\/sentences\/([^/]+)$/);
+          if (sentenceIdMatch && url.pathname !== '/api/sentences/summary') {
+            const sentenceId = decodeURIComponent(sentenceIdMatch[1]);
+
+            if (req.method === 'GET') {
+              try {
+                if (!fs.existsSync(sentencesFile)) {
+                  res.statusCode = 404;
+                  res.end(JSON.stringify({ success: false, error: 'Sentence not found' }));
+                  return;
+                }
+
+                const content = fs.readFileSync(sentencesFile, 'utf-8');
+                const store = JSON.parse(content);
+                const sentence = (store.sentences || []).find((s: any) => s.id === sentenceId);
+
+                if (!sentence) {
+                  res.statusCode = 404;
+                  res.end(JSON.stringify({ success: false, error: 'Sentence not found' }));
+                  return;
+                }
+
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, data: sentence }));
+              } catch (e) {
+                console.error('Failed to get sentence:', e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ success: false, error: 'Failed to get sentence' }));
+              }
+              return;
+            }
+
+            if (req.method === 'PATCH') {
+              const chunks: Buffer[] = [];
+              req.on('data', (chunk: any) => chunks.push(chunk));
+              req.on('end', () => {
+                try {
+                  const updates = JSON.parse(Buffer.concat(chunks).toString());
+
+                  if (!fs.existsSync(sentencesFile)) {
+                    res.statusCode = 404;
+                    res.end(JSON.stringify({ success: false, error: 'Sentence not found' }));
+                    return;
+                  }
+
+                  const content = fs.readFileSync(sentencesFile, 'utf-8');
+                  const store = JSON.parse(content);
+                  const index = (store.sentences || []).findIndex((s: any) => s.id === sentenceId);
+
+                  if (index === -1) {
+                    res.statusCode = 404;
+                    res.end(JSON.stringify({ success: false, error: 'Sentence not found' }));
+                    return;
+                  }
+
+                  // Merge updates
+                  store.sentences[index] = { ...store.sentences[index], ...updates };
+                  store.lastModified = Date.now();
+
+                  const updatedContent = JSON.stringify(store, null, 2);
+
+                  // Update public (Source of Truth)
+                  fs.writeFileSync(sentencesFile, updatedContent);
+
+                  // Update dist if it exists
+                  if (fs.existsSync(distDataDir)) {
+                    fs.writeFileSync(distSentencesFile, updatedContent);
+                  }
+
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ success: true, data: store.sentences[index] }));
+                } catch (e) {
+                  console.error('Failed to patch sentence:', e);
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ success: false, error: 'Failed to patch sentence' }));
+                }
+              });
+              return;
+            }
+          }
+
           if (url.pathname === '/api/sentences') {
             if (req.method === 'GET') {
               try {

@@ -1821,7 +1821,25 @@
       "createdAt": 1770384510650,
       "articleId": "article_1770384510650",
       "order": 14
+    },
+    {
+      "id": "sent_1770442289687_obsg",
+      "en": "HTTP requests arrive as a Stream (like a faucet of water), not a single block of data.",
+      "zh": "HTTP请求以流的形式到达（如同水龙头的水流），而非单一数据块。",
+      "sourceType": "paragraph",
+      "paragraphId": "para_1770442289687_en2x",
+      "order": 0,
+      "createdAt": 1770442289687
+    },
+    {
+      "id": "sent_1770442289687_ufvn",
+      "en": "You cannot just read req.body immediately; you have to \"catch\" the water in a bucket until the faucet turns off.",
+      "zh": "你不能直接读取req.body；必须先将水流\"接\"入容器中，直到水龙头关闭为止。",
+      "sourceType": "paragraph",
+      "paragraphId": "para_1770442289687_en2x",
+      "order": 1,
+      "createdAt": 1770442289687
     }
   ],
-  "lastModified": 1770428715865
+  "lastModified": 1770442289767
 }

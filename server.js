@@ -370,6 +370,98 @@ app.get('/articles/:filename', (req, res, next) => {
 
 // === Sentence API Routes ===
 
+// GET /api/sentences/summary - Mobile-optimized list (truncated, no full history)
+app.get('/api/sentences/summary', (req, res) => {
+    try {
+        if (!fs.existsSync(sentencesFile)) {
+            return res.json({ success: true, data: [], total: 0 });
+        }
+
+        const content = fs.readFileSync(sentencesFile, 'utf-8');
+        const store = JSON.parse(content);
+
+        const summary = (store.sentences || []).map(s => ({
+            id: s.id,
+            en: s.en ? (s.en.substring(0, 50) + (s.en.length > 50 ? '...' : '')) : '',
+            zh: s.zh ? (s.zh.substring(0, 50) + (s.zh.length > 50 ? '...' : '')) : '',
+            sourceType: s.sourceType,
+            articleId: s.articleId,
+            paragraphId: s.paragraphId,
+            hasUserTranslation: !!(s.userTranslationZh || s.userTranslationEn),
+            lastPracticed: s.lastPracticed,
+            createdAt: s.createdAt,
+        }));
+
+        res.json({ success: true, data: summary, total: summary.length });
+    } catch (e) {
+        console.error('Failed to get sentence summary:', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// GET /api/sentences/:id - Get single sentence details
+app.get('/api/sentences/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!fs.existsSync(sentencesFile)) {
+            return res.status(404).json({ success: false, error: 'Sentence not found' });
+        }
+
+        const content = fs.readFileSync(sentencesFile, 'utf-8');
+        const store = JSON.parse(content);
+        const sentence = (store.sentences || []).find(s => s.id === id);
+
+        if (!sentence) {
+            return res.status(404).json({ success: false, error: 'Sentence not found' });
+        }
+
+        res.json({ success: true, data: sentence });
+    } catch (e) {
+        console.error('Failed to get sentence:', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
+// PATCH /api/sentences/:id - Incremental update for single sentence
+app.patch('/api/sentences/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        const updates = req.body;
+
+        if (!fs.existsSync(sentencesFile)) {
+            return res.status(404).json({ success: false, error: 'Sentence not found' });
+        }
+
+        const content = fs.readFileSync(sentencesFile, 'utf-8');
+        const store = JSON.parse(content);
+        const index = (store.sentences || []).findIndex(s => s.id === id);
+
+        if (index === -1) {
+            return res.status(404).json({ success: false, error: 'Sentence not found' });
+        }
+
+        // Merge updates into existing sentence
+        store.sentences[index] = { ...store.sentences[index], ...updates };
+        store.lastModified = Date.now();
+
+        const updatedContent = JSON.stringify(store, null, 2);
+
+        // Update public (Source of Truth)
+        fs.writeFileSync(sentencesFile, updatedContent);
+
+        // Update dist if it exists
+        if (fs.existsSync(distDataDir)) {
+            fs.writeFileSync(distSentencesFile, updatedContent);
+        }
+
+        res.json({ success: true, data: store.sentences[index] });
+    } catch (e) {
+        console.error('Failed to patch sentence:', e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 // GET /api/sentences - Fetch all sentences
 app.get('/api/sentences', (req, res) => {
     try {
