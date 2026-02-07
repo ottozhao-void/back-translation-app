@@ -116,6 +116,17 @@
         100% { transform: translate(0, 0); }
       }
 
+      /* Pendulum swing animation for hanging navigation */
+      @keyframes pendulum-swing {
+        0% { transform: rotate(0deg); }
+        15% { transform: rotate(3deg); }
+        30% { transform: rotate(-2.5deg); }
+        45% { transform: rotate(1.5deg); }
+        60% { transform: rotate(-1deg); }
+        75% { transform: rotate(0.5deg); }
+        100% { transform: rotate(0deg); }
+      }
+
       .animate-float {
         animation: float 6s ease-in-out infinite;
       }

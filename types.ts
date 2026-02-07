@@ -43,6 +43,10 @@ export interface AppSettings {
   practiceGranularity: 'sentence' | 'paragraph';  // Default: 'sentence'
   llm?: LLMSettings;  // LLM platform settings (optional for backward compatibility)
   hideReferenceInDetailView?: boolean;  // Hide reference translation in detail view before practice
+
+  // User profile settings
+  userName?: string;  // User's display name for personalized greetings
+  greetingPrompt?: string;  // Custom LLM prompt for generating greetings
 }
 
 // --- Storage Keys ---
@@ -195,6 +199,7 @@ export type LLMTaskType =
   | 'segment-align'     // Semantically align and split EN+ZH texts together
   | 'translate'         // Translate text
   | 'score'             // Score user translation quality
+  | 'greeting'          // Generate personalized greetings
   | 'custom';           // Custom task with user-provided prompt
 
 /**

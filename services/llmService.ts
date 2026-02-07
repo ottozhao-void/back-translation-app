@@ -339,3 +339,94 @@ export async function segmentBothTexts(
   ]);
   return { en, zh };
 }
+
+// ============ Greeting Generation ============
+
+export interface GreetingResult {
+  success: boolean;
+  greetings: string[];
+  usedFallback: boolean;
+  error?: string;
+}
+
+const DEFAULT_GREETINGS = [
+  "Ready to sharpen your translation skills today?",
+  "Welcome back! Every sentence you practice makes you stronger.",
+  "Good to see you! Let's bridge languages together.",
+  "Translation is an art. Ready to create today?",
+  "每一次练习都是进步 — Let's begin!",
+];
+
+/**
+ * Generate personalized greetings using LLM with fallback defaults
+ */
+export async function generateGreetings(
+  userName?: string,
+  customPrompt?: string,
+  count: number = 5,
+  providerId?: string,
+  modelId?: string
+): Promise<GreetingResult> {
+  // If no provider/model specified, try to get defaults from config
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.greeting;
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If still no provider, use default greetings
+  if (!providerId || !modelId) {
+    console.warn('No LLM provider configured, using default greetings');
+    return {
+      success: true,
+      greetings: DEFAULT_GREETINGS,
+      usedFallback: true,
+    };
+  }
+
+  try {
+    // Replace {{name}} placeholder in custom prompt if provided
+    const processedPrompt = customPrompt
+      ? customPrompt.replace(/\{\{name\}\}/g, userName || 'the user')
+      : undefined;
+
+    const result = await executeTask<{ greetings: string[] }>(
+      'greeting',
+      providerId,
+      modelId,
+      {
+        name: userName,
+        customPrompt: processedPrompt,
+        count,
+      }
+    );
+
+    if (result.success && result.data?.greetings && result.data.greetings.length > 0) {
+      return {
+        success: true,
+        greetings: result.data.greetings,
+        usedFallback: false,
+      };
+    } else {
+      console.warn('LLM greeting generation failed, using defaults:', result.error);
+      return {
+        success: true,
+        greetings: DEFAULT_GREETINGS,
+        usedFallback: true,
+        error: result.error,
+      };
+    }
+  } catch (error) {
+    console.warn('LLM greeting error, using defaults:', error);
+    return {
+      success: true,
+      greetings: DEFAULT_GREETINGS,
+      usedFallback: true,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

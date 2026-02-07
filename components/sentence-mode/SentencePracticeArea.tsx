@@ -203,17 +203,6 @@ Please:
               <span>Back</span>
             </button>
           )}
-          <button
-            onClick={onModeToggle}
-            className="px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
-            style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              color: 'white',
-              border: '2px solid rgba(255,255,255,0.2)'
-            }}
-          >
-            {practiceMode === 'EN_TO_ZH' ? 'EN → 中' : '中 → EN'}
-          </button>
         </div>
         <div className="flex items-center gap-4">
           {/* Timer Display */}

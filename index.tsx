@@ -4,7 +4,7 @@ import { Article, PracticeMode, UserTranslation, AppSettings } from './types';
 import { fetchArticles, parseMarkdownArticle, saveArticleToServer, deleteArticleFromServer, renameArticleOnServer, serializeArticle } from './utils/articleLoader';
 
 // Components
-import { SettingsIcon, SunIcon, MoonIcon } from './components/Icons';
+import { SettingsIcon, SunIcon, MoonIcon, HomeIcon } from './components/Icons';
 import { SettingsModal } from './components/SettingsModal';
 import { LoadingSpinner } from './components/Skeleton';
 
@@ -28,6 +28,7 @@ const App: React.FC = () => {
 
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
+  const [hasSelectedSentence, setHasSelectedSentence] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('appSettings');
@@ -304,17 +305,19 @@ const App: React.FC = () => {
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: 'var(--particle-blue)' }} />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full blur-[120px] pointer-events-none" style={{ backgroundColor: 'var(--particle-purple)' }} />
 
-      {/* Navigation */}
-      <nav className="relative z-50 flex justify-center p-6">
-        <button
-          onClick={goHome}
-          className="text-sm tracking-[0.2em] uppercase font-light hover:text-[var(--text-main)] transition-colors duration-300 border-b border-transparent hover:border-[var(--text-secondary)] pb-1"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Articles
-        </button>
-
-        <div className="absolute right-6 top-6 flex gap-4">
+      {/* Navigation - Settings only, Articles button removed */}
+      <nav className="absolute z-50 right-6 top-6 flex gap-4">
+          {/* Home Button - only show when a sentence is selected */}
+          {view === 'HOME' && hasSelectedSentence && (
+            <button
+              onClick={() => setHasSelectedSentence(false)}
+              className="p-2 rounded-full transition-all duration-300 hover:scale-110"
+              style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border-high-contrast)' }}
+              title="Back to Home"
+            >
+              <HomeIcon />
+            </button>
+          )}
           <button
             onClick={() => setShowSettings(true)}
             className="p-2 rounded-full transition-all duration-300 hover:scale-110"
@@ -331,16 +334,17 @@ const App: React.FC = () => {
           >
             {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
           </button>
-        </div>
       </nav>
 
-      <main className="relative z-10 max-w-[1920px] mx-auto px-6 h-[calc(100vh-80px)]">
+      <main className="relative z-10 max-w-[1920px] mx-auto px-6 h-[calc(100vh-80px)] pt-16">
         {isLoading ? (
           <LoadingSpinner text="Loading articles..." />
         ) : view === 'HOME' ? (
           <SentenceMode
             articles={articles}
             appSettings={appSettings}
+            onSelectionChange={setHasSelectedSentence}
+            shouldClearSelection={!hasSelectedSentence}
           />
         ) : view === 'MODE_SELECT' && selectedArticle ? (
           <ModeSelector

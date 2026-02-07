@@ -109,6 +109,48 @@ User's translation: ${params.userTranslation || ''}
     }
   },
 
+  // ============ Personalized Greeting ============
+  greeting: {
+    systemPrompt: (params) => {
+      // Use custom prompt if provided, otherwise use default
+      if (params.customPrompt) {
+        return String(params.customPrompt);
+      }
+      return `
+You are a friendly language learning companion. Generate warm, encouraging greetings for a user practicing English-Chinese translation.
+
+Rules:
+1. Create exactly ${params.count || 5} unique greeting messages
+2. Each greeting should be 1-2 sentences, friendly and motivating
+3. Vary the style: some can be inspiring, some casual, some curious about their progress
+4. If the user's name is provided, use it naturally (don't force it into every greeting)
+5. IMPORTANT: Each greeting must be in ONE language only - either all English OR all Chinese. Do NOT mix languages within a single greeting.
+6. Mix up the languages across greetings (some in English, some in Chinese), but never within the same greeting
+7. Reference language learning, translation practice, or bilingual skills
+8. Make greetings feel personal and warm, not generic
+
+Return JSON: { "greetings": ["greeting1", "greeting2", ...] }
+
+Important: Only return valid JSON, no additional text.
+`.trim();
+    },
+    buildUserMessage: (params) => {
+      const name = params.name ? `User's name: ${params.name}` : 'User has not set a name';
+      const time = new Date().getHours();
+      let timeOfDay = 'day';
+      if (time >= 5 && time < 12) timeOfDay = 'morning';
+      else if (time >= 12 && time < 17) timeOfDay = 'afternoon';
+      else if (time >= 17 && time < 21) timeOfDay = 'evening';
+      else timeOfDay = 'night';
+
+      return `${name}\nTime of day: ${timeOfDay}\nGenerate ${params.count || 5} unique greetings.`;
+    },
+    parseResponse: (raw: unknown) => {
+      const data = raw as { greetings?: string[] };
+      return { greetings: Array.isArray(data?.greetings) ? data.greetings : [] };
+    }
+  },
+
   // ============ Custom Task ============
   custom: {
     systemPrompt: (params) => String(params.systemPrompt || 'You are a helpful assistant. Return your response as valid JSON.'),
