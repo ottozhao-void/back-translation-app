@@ -61,10 +61,17 @@ index.tsx           # App root, state management, view routing
 │   ├── sentence-mode/      # SentenceMode sub-components
 │   │   ├── SentenceSidebar.tsx
 │   │   ├── SentencePracticeArea.tsx
-│   │   ├── SentenceDetailView.tsx  # Sentence detail with context actions
+│   │   ├── SentenceDetailView.tsx  # Card carousel container for detail views
 │   │   ├── ImportModal.tsx       # Import with LLM segmentation
-│   │   └── AlignmentEditor.tsx   # Sentence alignment editor
+│   │   ├── AlignmentEditor.tsx   # Sentence alignment editor
+│   │   └── cards/               # Detail view card components
+│   │       ├── CardCarousel.tsx     # Horizontal carousel with keyboard/wheel nav
+│   │       ├── SentenceInfoCard.tsx # Sentence content and actions
+│   │       ├── StatsCard.tsx        # Practice statistics
+│   │       └── VocabularyCard.tsx   # Vocabulary (placeholder)
 │   └── ...
+├── hooks/
+│   └── usePracticeTimer.ts  # Practice session timing with stable callbacks
 ├── utils/
 │   ├── articleLoader.ts    # Article parsing, serialization, API calls
 │   ├── sentenceLoader.ts   # Sentence CRUD operations
@@ -212,6 +219,7 @@ The app includes a generic LLM platform for AI-powered features like intelligent
 
 ## Gotchas
 
+- **useCallback with timers**: Timer hooks that update `elapsed` frequently will cause `useCallback` functions depending on it to get new references. Use refs and functional state updates to keep callback references stable. See `usePracticeTimer.ts` for the pattern.
 - **CSS Variables**: Using undefined CSS variables (e.g., `var(--accent-blue)`) fails silently. Always verify variables exist in `index.html` `:root`.
 - **Toast z-index**: Toast container uses `z-[200]`. Action buttons need `pointerEvents: 'auto'` and `e.stopPropagation()` to be clickable.
 - **Soft Delete Pattern**: Delete operations use 5-second timeout + undo. Store pending deletes in a ref, not state, to avoid re-render issues.
