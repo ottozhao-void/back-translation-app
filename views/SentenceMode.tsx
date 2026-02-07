@@ -7,6 +7,7 @@ import { SentencePracticeArea } from '../components/sentence-mode/SentencePracti
 import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { SidebarCollapseIcon, SidebarExpandIcon, HomeIcon } from '../components/Icons';
+import { HistoryModal } from '../components/HistoryModal';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { ToastContainer, useToast } from '../components/Toast';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -71,6 +72,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
 
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Toast and soft delete states
@@ -185,6 +187,17 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
 
   const handleClearContextFilter = useCallback(() => {
     setContextFilter(null);
+  }, []);
+
+  // Handle opening history modal
+  const handleOpenHistory = useCallback(() => {
+    setShowHistoryModal(true);
+  }, []);
+
+  // Handle navigating to a sentence from history
+  const handleNavigateToSentence = useCallback((sentenceId: string) => {
+    setSelectedId(sentenceId);
+    setViewMode('detail');
   }, []);
 
   // Handle mode toggle
@@ -326,6 +339,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onSelectSentence={handleSelectSentence}
         onImport={() => setShowImportModal(true)}
         onDeleteSentence={handleDeleteSentence}
+        onOpenHistory={handleOpenHistory}
         isCollapsed={sidebarCollapsed}
         contextFilter={contextFilter}
         onClearContextFilter={handleClearContextFilter}
@@ -391,6 +405,15 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         <ImportModal
           onClose={() => setShowImportModal(false)}
           onImportSuccess={handleImportSuccess}
+        />
+      )}
+
+      {/* History Modal */}
+      {showHistoryModal && (
+        <HistoryModal
+          sentences={sentences}
+          onClose={() => setShowHistoryModal(false)}
+          onNavigateToSentence={handleNavigateToSentence}
         />
       )}
     </div>

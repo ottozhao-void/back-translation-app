@@ -164,6 +164,13 @@ export const HomeIcon = () => (
     </svg>
 );
 
+// --- History Icon ---
+export const HistoryIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
 // --- Flag Icons ---
 export const UKFlagIcon: React.FC<{ className?: string }> = ({ className = 'w-8 h-6' }) => (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 30" className={className}>
@@ -205,6 +212,12 @@ export const ArrowForwardIcon: React.FC<{ className?: string }> = ({ className =
 );
 
 // --- Chevron Icons ---
+export const ChevronRightIcon: React.FC<{ className?: string }> = ({ className = 'w-5 h-5' }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+);
+
 export const ChevronDownIcon: React.FC<{ className?: string; style?: React.CSSProperties }> = ({ className = 'w-5 h-5', style }) => (
     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className} style={style}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
