@@ -14,11 +14,16 @@ import { ModeSelector } from './views/ModeSelector';
 import { PracticeSession } from './views/PracticeSession';
 import { SentenceMode } from './views/SentenceMode';
 
+// Mobile
+import { useDeviceType } from './hooks/useDeviceType';
+import { MobileApp } from './views/mobile/MobileApp';
+
 // --- Types for App State ---
 type ViewState = 'HOME' | 'MODE_SELECT' | 'PRACTICE';
 
 // --- Main App Component ---
 const App: React.FC = () => {
+  const { isMobile } = useDeviceType();
   const [view, setView] = useState<ViewState>('HOME');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
@@ -299,6 +304,19 @@ const App: React.FC = () => {
     await saveArticleToServer(filename, fileContent);
   };
 
+  // Render mobile UI for mobile devices
+  if (isMobile) {
+    return (
+      <MobileApp
+        appSettings={appSettings}
+        onUpdateSettings={updateAppSettings}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+      />
+    );
+  }
+
+  // Desktop UI
   return (
     <div className="min-h-screen relative overflow-hidden font-sans selection:bg-[var(--surface-active)]" style={{ backgroundColor: 'var(--bg-main)', color: 'var(--text-main)' }}>
       {/* Background Ambience */}
