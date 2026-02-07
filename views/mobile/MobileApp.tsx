@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { SentencePair, AppSettings, PracticeMode } from '../../types';
-import { fetchSentenceSummary, fetchSentenceById, SentenceSummary } from '../../utils/sentenceLoader';
+import { fetchSentenceSummary, fetchSentenceById, fetchSentences, SentenceSummary } from '../../utils/sentenceLoader';
 import { BottomTabBar } from '../../components/mobile/BottomTabBar';
 import { MobileHeader } from '../../components/mobile/MobileHeader';
 import { MobileGreetingOverlay } from '../../components/mobile/MobileGreetingOverlay';
@@ -8,8 +8,9 @@ import { MobileModeSelector } from '../../components/mobile/MobileModeSelector';
 import { MobileHome } from './MobileHome';
 import { MobilePractice } from './MobilePractice';
 import { MobileSettings } from './MobileSettings';
+import { MobileHistory } from './MobileHistory';
 
-export type MobileTab = 'home' | 'practice' | 'settings';
+export type MobileTab = 'home' | 'practice' | 'history' | 'settings';
 
 interface MobileAppProps {
   appSettings: AppSettings;
@@ -50,6 +51,10 @@ export const MobileApp: React.FC<MobileAppProps> = ({
   // Practice mode
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
 
+  // History tab: full sentences data (lazy loaded)
+  const [fullSentences, setFullSentences] = useState<SentencePair[]>([]);
+  const [isLoadingFullSentences, setIsLoadingFullSentences] = useState(false);
+
   // Load sentence summaries on mount
   useEffect(() => {
     const loadSummaries = async () => {
@@ -62,6 +67,19 @@ export const MobileApp: React.FC<MobileAppProps> = ({
     };
     loadSummaries();
   }, []);
+
+  // Lazy load full sentences when history tab is first accessed
+  useEffect(() => {
+    if (activeTab === 'history' && fullSentences.length === 0 && !isLoadingFullSentences) {
+      const loadFullSentences = async () => {
+        setIsLoadingFullSentences(true);
+        const sentences = await fetchSentences();
+        setFullSentences(sentences);
+        setIsLoadingFullSentences(false);
+      };
+      loadFullSentences();
+    }
+  }, [activeTab, fullSentences.length, isLoadingFullSentences]);
 
   // Handle sentence selection from home view
   const handleSelectSentence = async (id: string) => {
@@ -117,6 +135,12 @@ export const MobileApp: React.FC<MobileAppProps> = ({
           }
         : s
     ));
+    // Also update fullSentences if loaded (for history view sync)
+    if (fullSentences.length > 0) {
+      setFullSentences(prev => prev.map(s =>
+        s.id === updatedSentence.id ? updatedSentence : s
+      ));
+    }
   };
 
   // Go back to home from practice
@@ -173,6 +197,8 @@ export const MobileApp: React.FC<MobileAppProps> = ({
         );
       case 'settings':
         return <MobileHeader title="Settings" />;
+      case 'history':
+        return <MobileHeader title="练习历史" />;
       default:
         return null;
     }
@@ -214,6 +240,14 @@ export const MobileApp: React.FC<MobileAppProps> = ({
             onUpdate={onUpdateSettings}
             theme={theme}
             onToggleTheme={onToggleTheme}
+          />
+        );
+      case 'history':
+        return (
+          <MobileHistory
+            sentences={fullSentences}
+            isLoading={isLoadingFullSentences}
+            onNavigateToSentence={handleSelectSentence}
           />
         );
       default:
