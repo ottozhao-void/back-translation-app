@@ -11,8 +11,8 @@
       "createdAt": 1770284174484,
       "userTranslationZh": {
         "type": "diff",
-        "text": "这本书可以被用于课堂教学或者自学。其主要是为中文翻译者或者正在练习翻译的英语专业高年级学生而写。但我也希望这本书同样对那些需要英语写作并且期待提升写作能力的中国人有帮助，比如新闻，外交，商务，旅游，广告和其他众多行业的从业人员。",
-        "timestamp": 1765897861899
+        "text": "这本书可以被用于课堂教学或者自学。",
+        "timestamp": 1770475379229
       },
       "userTranslationEn": {
         "type": "llm",
@@ -27,7 +27,7 @@
         ],
         "score": 60
       },
-      "lastPracticed": 1766878708660,
+      "lastPracticed": 1770475379229,
       "articleId": "1766188879030_the_translator_s_guide_to_chinglish___forward.json",
       "paragraphOrder": 0,
       "order": 0
@@ -1855,5 +1855,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770464237943
+  "lastModified": 1770475379247
 }
