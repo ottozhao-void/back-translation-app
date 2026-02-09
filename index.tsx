@@ -4,7 +4,7 @@ import { Article, PracticeMode, UserTranslation, AppSettings } from './types';
 import { fetchArticles, parseMarkdownArticle, saveArticleToServer, deleteArticleFromServer, renameArticleOnServer, serializeArticle } from './utils/articleLoader';
 
 // Components
-import { SettingsIcon, SunIcon, MoonIcon, HomeIcon } from './components/Icons';
+import { SettingsIcon, SunIcon, MoonIcon, HomeIcon, HistoryIcon } from './components/Icons';
 import { SettingsModal } from './components/SettingsModal';
 import { LoadingSpinner } from './components/Skeleton';
 
@@ -33,6 +33,7 @@ const App: React.FC = () => {
 
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [hasSelectedSentence, setHasSelectedSentence] = useState(false);
   const [appSettings, setAppSettings] = useState<AppSettings>(() => {
     if (typeof window !== 'undefined') {
@@ -336,6 +337,17 @@ const App: React.FC = () => {
               <HomeIcon />
             </button>
           )}
+          {/* History Button - show on HOME view */}
+          {view === 'HOME' && (
+            <button
+              onClick={() => setShowHistoryModal(true)}
+              className="p-2 rounded-full transition-all duration-300 hover:scale-110"
+              style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)', border: '1px solid var(--border-high-contrast)' }}
+              title="Practice History"
+            >
+              <HistoryIcon />
+            </button>
+          )}
           <button
             onClick={() => setShowSettings(true)}
             className="p-2 rounded-full transition-all duration-300 hover:scale-110"
@@ -363,6 +375,8 @@ const App: React.FC = () => {
             appSettings={appSettings}
             onSelectionChange={setHasSelectedSentence}
             shouldClearSelection={!hasSelectedSentence}
+            historyModalOpen={showHistoryModal}
+            onHistoryModalClose={() => setShowHistoryModal(false)}
           />
         ) : view === 'MODE_SELECT' && selectedArticle ? (
           <ModeSelector

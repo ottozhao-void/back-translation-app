@@ -9,6 +9,7 @@ import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { TagPickerModal } from '../components/sentence-mode/TagPickerModal';
 import { SidebarCollapseIcon, SidebarExpandIcon, HomeIcon } from '../components/Icons';
 import { HistoryModal } from '../components/HistoryModal';
+import { SearchModal } from '../components/SearchModal';
 import { AVAILABLE_COMMANDS } from '../constants';
 import { ToastContainer, useToast } from '../components/Toast';
 import { ConfirmModal } from '../components/ConfirmModal';
@@ -42,9 +43,11 @@ interface SentenceModeProps {
   appSettings: AppSettings;
   onSelectionChange?: (hasSelection: boolean) => void;
   shouldClearSelection?: boolean;
+  historyModalOpen?: boolean;
+  onHistoryModalClose?: () => void;
 }
 
-export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSettings, onSelectionChange, shouldClearSelection }) => {
+export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSettings, onSelectionChange, shouldClearSelection, historyModalOpen, onHistoryModalClose }) => {
   const [sentences, setSentences] = useState<SentencePair[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [practiceMode, setPracticeMode] = useState<PracticeMode>('EN_TO_ZH');
@@ -160,6 +163,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // Modal states
   const [showImportModal, setShowImportModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showSearchModal, setShowSearchModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Toast and soft delete states
@@ -276,9 +280,27 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     setContextFilter(null);
   }, []);
 
-  // Handle opening history modal
+  // Handle opening history modal (internal trigger)
   const handleOpenHistory = useCallback(() => {
     setShowHistoryModal(true);
+  }, []);
+
+  // Handle closing history modal
+  const handleCloseHistory = useCallback(() => {
+    setShowHistoryModal(false);
+    onHistoryModalClose?.();
+  }, [onHistoryModalClose]);
+
+  // Sync with external history modal state
+  useEffect(() => {
+    if (historyModalOpen) {
+      setShowHistoryModal(true);
+    }
+  }, [historyModalOpen]);
+
+  // Handle opening search modal
+  const handleOpenSearch = useCallback(() => {
+    setShowSearchModal(true);
   }, []);
 
   // Handle navigating to a sentence from history
@@ -426,7 +448,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onSelectSentence={handleSelectSentence}
         onImport={() => setShowImportModal(true)}
         onDeleteSentence={handleDeleteSentence}
-        onOpenHistory={handleOpenHistory}
+        onOpenSearch={handleOpenSearch}
         isCollapsed={sidebarCollapsed}
         contextFilter={contextFilter}
         onClearContextFilter={handleClearContextFilter}
@@ -505,8 +527,23 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
       {showHistoryModal && (
         <HistoryModal
           sentences={sentences}
-          onClose={() => setShowHistoryModal(false)}
+          onClose={handleCloseHistory}
           onNavigateToSentence={handleNavigateToSentence}
+        />
+      )}
+
+      {/* Search Modal */}
+      {showSearchModal && (
+        <SearchModal
+          isOpen={showSearchModal}
+          onClose={() => setShowSearchModal(false)}
+          sentences={sentences}
+          allTags={[...Object.values(SYSTEM_TAGS), ...userTags]}
+          onSelectResult={(id) => {
+            setSelectedId(id);
+            setViewMode('detail');
+            setShowSearchModal(false);
+          }}
         />
       )}
 

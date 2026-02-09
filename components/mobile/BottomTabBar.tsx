@@ -87,22 +87,21 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({
                 color: isActive ? 'var(--text-main)' : 'var(--text-secondary)',
               }}
             >
-              {/* Badge for practice tab */}
-              {tab.id === 'practice' && practiceBadge && practiceBadge > 0 && (
-                <span
-                  className="absolute top-1 right-1/4 min-w-[18px] h-[18px] px-1 text-xs font-medium rounded-full flex items-center justify-center"
-                  style={{
-                    backgroundColor: 'var(--accent-red, #ef4444)',
-                    color: 'white',
-                  }}
-                >
-                  {practiceBadge > 99 ? '99+' : practiceBadge}
-                </span>
-              )}
-
-              {/* Icon */}
-              <span className={`transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
+              {/* Icon with badge wrapper */}
+              <span className={`relative transition-transform duration-200 ${isActive ? 'scale-110' : ''}`}>
                 {tab.icon}
+                {/* Badge for practice tab - positioned relative to icon */}
+                {tab.id === 'practice' && practiceBadge && practiceBadge > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 text-xs font-medium rounded-full flex items-center justify-center"
+                    style={{
+                      backgroundColor: 'var(--accent-red, #ef4444)',
+                      color: 'white',
+                    }}
+                  >
+                    {practiceBadge > 99 ? '99+' : practiceBadge}
+                  </span>
+                )}
               </span>
 
               {/* Label */}

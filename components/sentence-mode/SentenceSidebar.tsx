@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SentencePair, PracticeMode, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, SystemTagId } from '../../types';
-import { ArrowLeftIcon, HistoryIcon } from '../Icons';
+import { ArrowLeftIcon, SearchIcon } from '../Icons';
 import { TagDots } from './TagChip';
 
 interface SentenceItemProps {
@@ -93,7 +93,7 @@ interface SentenceSidebarProps {
   onSelectSentence: (id: string) => void;
   onImport: () => void;
   onDeleteSentence?: (id: string) => void;
-  onOpenHistory?: () => void;
+  onOpenSearch?: () => void;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   contextFilter?: ContextFilter | null;
@@ -177,7 +177,7 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   onSelectSentence,
   onImport,
   onDeleteSentence,
-  onOpenHistory,
+  onOpenSearch,
   isCollapsed = false,
   onToggleCollapse,
   contextFilter,
@@ -355,15 +355,15 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
                 All Sentences
               </h2>
               <div className="flex items-center gap-2 flex-shrink-0">
-                {/* History Button */}
-                {onOpenHistory && (
+                {/* Search Button */}
+                {onOpenSearch && (
                   <button
-                    onClick={onOpenHistory}
+                    onClick={onOpenSearch}
                     className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
-                    title="Practice History"
+                    title="Search"
                     style={{ color: 'var(--text-secondary)' }}
                   >
-                    <HistoryIcon />
+                    <SearchIcon />
                   </button>
                 )}
                 <span

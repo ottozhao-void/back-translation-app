@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SentencePair, AppSettings, PracticeMode } from '../../types';
+import { SentencePair, AppSettings, PracticeMode, TagInfo, SYSTEM_TAGS } from '../../types';
 import { fetchSentenceSummary, fetchSentenceById, fetchSentences, SentenceSummary } from '../../utils/sentenceLoader';
 import { BottomTabBar } from '../../components/mobile/BottomTabBar';
 import { MobileHeader } from '../../components/mobile/MobileHeader';
@@ -9,6 +9,8 @@ import { MobileHome } from './MobileHome';
 import { MobilePractice } from './MobilePractice';
 import { MobileSettings } from './MobileSettings';
 import { MobileHistory } from './MobileHistory';
+import { SearchIcon } from '../../components/Icons';
+import { SearchModal } from '../../components/SearchModal';
 
 export type MobileTab = 'home' | 'practice' | 'history' | 'settings';
 
@@ -54,6 +56,11 @@ export const MobileApp: React.FC<MobileAppProps> = ({
   // History tab: full sentences data (lazy loaded)
   const [fullSentences, setFullSentences] = useState<SentencePair[]>([]);
   const [isLoadingFullSentences, setIsLoadingFullSentences] = useState(false);
+  const [needsHistoryRefresh, setNeedsHistoryRefresh] = useState(false);
+
+  // Search modal state
+  const [showSearchModal, setShowSearchModal] = useState(false);
+  const [userTags, setUserTags] = useState<TagInfo[]>([]);
 
   // Load sentence summaries on mount
   useEffect(() => {
@@ -68,18 +75,42 @@ export const MobileApp: React.FC<MobileAppProps> = ({
     loadSummaries();
   }, []);
 
-  // Lazy load full sentences when history tab is first accessed
+  // Load user tags on mount
   useEffect(() => {
-    if (activeTab === 'history' && fullSentences.length === 0 && !isLoadingFullSentences) {
+    const loadUserTags = async () => {
+      try {
+        const response = await fetch('/api/tags');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setUserTags(data.data || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load user tags:', error);
+      }
+    };
+    loadUserTags();
+  }, []);
+
+  // Lazy load full sentences when history tab is first accessed or search modal opened
+  // Also reload when needsHistoryRefresh is true (after practice updates)
+  useEffect(() => {
+    const shouldLoad = (activeTab === 'history' || showSearchModal) &&
+      (fullSentences.length === 0 || needsHistoryRefresh) &&
+      !isLoadingFullSentences;
+
+    if (shouldLoad) {
       const loadFullSentences = async () => {
         setIsLoadingFullSentences(true);
         const sentences = await fetchSentences();
         setFullSentences(sentences);
         setIsLoadingFullSentences(false);
+        setNeedsHistoryRefresh(false); // Reset flag after loading
       };
       loadFullSentences();
     }
-  }, [activeTab, fullSentences.length, isLoadingFullSentences]);
+  }, [activeTab, fullSentences.length, isLoadingFullSentences, needsHistoryRefresh, showSearchModal]);
 
   // Handle sentence selection from home view
   const handleSelectSentence = async (id: string) => {
@@ -135,7 +166,9 @@ export const MobileApp: React.FC<MobileAppProps> = ({
           }
         : s
     ));
-    // Also update fullSentences if loaded (for history view sync)
+    // Mark history as needing refresh
+    setNeedsHistoryRefresh(true);
+    // Also update fullSentences if loaded (for immediate sync if user is on history tab)
     if (fullSentences.length > 0) {
       setFullSentences(prev => prev.map(s =>
         s.id === updatedSentence.id ? updatedSentence : s
@@ -177,7 +210,20 @@ export const MobileApp: React.FC<MobileAppProps> = ({
   const renderHeader = () => {
     switch (activeTab) {
       case 'home':
-        return <MobileHeader title="Aether Translate" />;
+        return (
+          <MobileHeader
+            title="Aether Translate"
+            rightContent={
+              <button
+                onClick={() => setShowSearchModal(true)}
+                className="p-2 rounded-lg"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <SearchIcon />
+              </button>
+            }
+          />
+        );
       case 'practice':
         return (
           <MobileHeader
@@ -299,6 +345,20 @@ export const MobileApp: React.FC<MobileAppProps> = ({
             practiceBadge={unpracticedCount > 0 ? unpracticedCount : undefined}
           />
         </>
+      )}
+
+      {/* Search Modal */}
+      {showSearchModal && (
+        <SearchModal
+          isOpen={showSearchModal}
+          onClose={() => setShowSearchModal(false)}
+          sentences={fullSentences}
+          allTags={[...Object.values(SYSTEM_TAGS), ...userTags]}
+          onSelectResult={(id) => {
+            setShowSearchModal(false);
+            handleSelectSentence(id);
+          }}
+        />
       )}
     </div>
   );

@@ -227,7 +227,13 @@
       "createdAt": 1770284174484,
       "articleId": "1766188879030_the_translator_s_guide_to_chinglish___forward.json",
       "paragraphOrder": 3,
-      "order": 3
+      "order": 3,
+      "userTranslationZh": {
+        "type": "draft",
+        "text": "这些词语并非互斥，每一个审阅初稿的译者能够，也理应亲自润色。",
+        "timestamp": 1770526777930
+      },
+      "lastPracticed": 1770526777590
     },
     {
       "id": "1766188879030_the_translator_s_guide_to_chinglish___forward.json_article-1.md_p4_s0",
@@ -1389,7 +1395,12 @@
       "createdAt": 1770284174484,
       "articleId": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json",
       "paragraphOrder": 11,
-      "order": 1
+      "order": 1,
+      "userTranslationZh": {
+        "type": "draft",
+        "text": "q",
+        "timestamp": 1770629771448
+      }
     },
     {
       "id": "fall-forward--lessons-on-failure-and-success-from-denzel-washington.json.json_fall-forward--lessons-on-failure-and-success-from-denzel-washington.json_p11_s2",
@@ -1806,7 +1817,20 @@
       "sourceType": "paragraph",
       "paragraphId": "para_1770442289687_en2x",
       "order": 0,
-      "createdAt": 1770442289687
+      "createdAt": 1770442289687,
+      "lastPracticed": 1770626828859,
+      "userTranslationZh": {
+        "type": "diff",
+        "text": "HTTP请求是以流形式到达的，就像水龙头中流出的水，而不是一整个数据块。",
+        "timestamp": 1770626828859
+      },
+      "practiceStats": {
+        "attempts": 1,
+        "totalTimeMs": 413220,
+        "lastAttemptMs": 413220,
+        "lastPracticedAt": 1770626828859,
+        "bestTimeMs": 413220
+      }
     },
     {
       "id": "sent_1770442289687_ufvn",
@@ -1815,7 +1839,13 @@
       "sourceType": "paragraph",
       "paragraphId": "para_1770442289687_en2x",
       "order": 1,
-      "createdAt": 1770442289687
+      "createdAt": 1770442289687,
+      "userTranslationZh": {
+        "type": "diff",
+        "text": "你无法立即读出req.body, 只能先用一个桶接住，直到水龙头关闭掉。",
+        "timestamp": 1770630116745
+      },
+      "lastPracticed": 1770630116745
     },
     {
       "id": "sent_1770453705733_cy4c",
@@ -1832,5 +1862,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770484179476
+  "lastModified": 1770630116251
 }
