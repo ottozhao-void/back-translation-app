@@ -1,9 +1,11 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { SentencePair, PracticeMode, UserTranslation, AppSettings } from '../../types';
-import { patchSentence } from '../../utils/sentenceLoader';
 import { SwipeCard } from '../../components/mobile/SwipeCard';
 import { PracticeToolbar } from '../../components/mobile/PracticeToolbar';
 import { TranslationInput } from '../../components/mobile/TranslationInput';
+import { usePracticeTimer } from '../../hooks/usePracticeTimer';
+import { FeedbackSheet, FeedbackData } from '../../components/common/FeedbackSheet';
+import { getTranslationFeedback } from '../../services/llmService';
 
 interface MobilePracticeProps {
   sentence: SentencePair;
@@ -12,7 +14,7 @@ interface MobilePracticeProps {
   totalCount: number;
   onNext: () => void;
   onPrev: () => void;
-  onUpdate: (sentence: SentencePair) => void;
+  onSubmit: (sentenceId: string, translation: UserTranslation, durationMs?: number) => Promise<void>;
   appSettings: AppSettings;
 }
 
@@ -24,6 +26,7 @@ interface MobilePracticeProps {
  * - Tap card to flip and reveal answer
  * - Bottom toolbar with actions
  * - Auto-save drafts
+ * - Practice timer for tracking duration
  */
 export const MobilePractice: React.FC<MobilePracticeProps> = ({
   sentence,
@@ -32,13 +35,22 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   totalCount,
   onNext,
   onPrev,
-  onUpdate,
+  onSubmit,
   appSettings,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
   const [userInput, setUserInput] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // Feedback sheet state
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<FeedbackData | undefined>();
+  const [feedbackError, setFeedbackError] = useState<string | undefined>();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSentenceIdRef = useRef<string | null>(null); // Start as null to trigger on first mount
+
+  // Practice timer - starts when sentence is displayed
+  const { formatTime, stop: stopTimer, restart: restartTimer } = usePracticeTimer(false);
 
   // Get the correct text based on practice mode
   const originalText = mode === 'EN_TO_ZH' ? sentence.en : sentence.zh;
@@ -47,17 +59,18 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
     ? sentence.userTranslationZh
     : sentence.userTranslationEn;
 
-  // Initialize input with existing translation (draft or submitted)
-  React.useEffect(() => {
-    if (existingTranslation?.text) {
-      setUserInput(existingTranslation.text);
-    } else {
-      setUserInput('');
+  // Initialize input and restart timer on mount AND when sentence ID changes
+  useEffect(() => {
+    // Reset state on first mount or when switching to a different sentence
+    if (lastSentenceIdRef.current === null || sentence.id !== lastSentenceIdRef.current) {
+      setIsFlipped(false);
+      restartTimer();
+      setUserInput(existingTranslation?.text || '');
+      lastSentenceIdRef.current = sentence.id;
     }
-    setIsFlipped(false);
-  }, [sentence.id, existingTranslation]);
+  }, [sentence.id, existingTranslation?.text, restartTimer]);
 
-  // Auto-save draft
+  // Auto-save draft (without stopping timer)
   const handleInputChange = useCallback((text: string) => {
     setUserInput(text);
 
@@ -77,23 +90,20 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
           timestamp: Date.now(),
         };
 
-        const updates = mode === 'EN_TO_ZH'
-          ? { userTranslationZh: draft }
-          : { userTranslationEn: draft };
-
-        const response = await patchSentence(sentence.id, updates);
-        if (response.success && response.data) {
-          onUpdate(response.data);
-        }
+        // Auto-save as draft - no duration tracking for drafts
+        await onSubmit(sentence.id, draft);
       }
     }, appSettings.autoSave.delay);
-  }, [sentence.id, mode, appSettings, onUpdate]);
+  }, [sentence.id, appSettings, onSubmit]);
 
-  // Submit translation
+  // Submit translation with timing
   const handleSubmit = async () => {
     if (!userInput.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
+
+    // Stop timer and capture duration
+    const duration = stopTimer();
 
     const translation: UserTranslation = {
       type: 'diff', // Using diff mode for mobile (simplified)
@@ -101,15 +111,9 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
       timestamp: Date.now(),
     };
 
-    const updates = mode === 'EN_TO_ZH'
-      ? { userTranslationZh: translation, lastPracticed: Date.now() }
-      : { userTranslationEn: translation, lastPracticed: Date.now() };
-
-    const response = await patchSentence(sentence.id, updates);
-    if (response.success && response.data) {
-      onUpdate(response.data);
-      setIsFlipped(true); // Show answer after submit
-    }
+    // Submit with duration for stats tracking
+    await onSubmit(sentence.id, translation, duration);
+    setIsFlipped(true); // Show answer after submit
 
     setIsSubmitting(false);
   };
@@ -123,21 +127,63 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
     }
   };
 
-  // Skip to next sentence
-  const handleSkip = () => {
-    onNext();
-  };
-
   // Reset current practice
   const handleReset = () => {
     setUserInput('');
     setIsFlipped(false);
+    restartTimer(); // Restart timer on reset
+  };
+
+  // Get LLM feedback on the translation
+  const handleGetFeedback = async () => {
+    if (!userInput.trim()) return;
+
+    // Open sheet and show loading
+    setIsFeedbackOpen(true);
+    setFeedbackLoading(true);
+    setFeedbackData(undefined);
+    setFeedbackError(undefined);
+
+    const result = await getTranslationFeedback(
+      originalText,
+      referenceText,
+      userInput
+    );
+
+    setFeedbackLoading(false);
+
+    if (result.success && result.data) {
+      setFeedbackData(result.data);
+    } else {
+      setFeedbackError(result.error || 'Failed to get feedback');
+    }
+  };
+
+  const handleCloseFeedback = () => {
+    setIsFeedbackOpen(false);
+    // Clear data after close animation
+    setTimeout(() => {
+      setFeedbackData(undefined);
+      setFeedbackError(undefined);
+    }, 300);
   };
 
   return (
     <div className="flex flex-col h-full px-4 pt-4 pb-24">
+      {/* Timer Display - above swipe card */}
+      {!isFlipped && (
+        <div className="flex-shrink-0 flex justify-center mb-2">
+          <span
+            className="text-sm font-mono px-3 py-1 rounded-lg"
+            style={{ backgroundColor: 'var(--surface-hover)', color: 'var(--text-secondary)' }}
+          >
+            {formatTime()}
+          </span>
+        </div>
+      )}
+
       {/* Swipe Card Area - constrained height to prevent overlap */}
-      <div className="flex-shrink-0 flex flex-col items-center justify-center" style={{ height: '50vh', maxHeight: '400px' }}>
+      <div className="flex-shrink-0 flex flex-col items-center justify-center" style={{ height: '45vh', maxHeight: '380px' }}>
         <SwipeCard
           frontText={originalText}
           backText={referenceText}
@@ -164,11 +210,22 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
       <div className="flex-shrink-0 mt-3">
         <PracticeToolbar
           onSubmit={handleSubmit}
-          onSkip={handleSkip}
           onReset={handleReset}
+          onFeedback={handleGetFeedback}
           isSubmitDisabled={!userInput.trim() || isSubmitting}
+          isSubmitted={isFlipped}
         />
       </div>
+
+      {/* Feedback Sheet */}
+      <FeedbackSheet
+        isOpen={isFeedbackOpen}
+        onClose={handleCloseFeedback}
+        isLoading={feedbackLoading}
+        data={feedbackData}
+        error={feedbackError}
+        onRetry={handleGetFeedback}
+      />
     </div>
   );
 };

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { SentencePair, AppSettings, PracticeMode, TagInfo, SYSTEM_TAGS } from '../../types';
-import { fetchSentenceSummary, fetchSentenceById, fetchSentences, SentenceSummary } from '../../utils/sentenceLoader';
+import { SentencePair, AppSettings, PracticeMode, TagInfo, SYSTEM_TAGS, UserTranslation } from '../../types';
+import { fetchSentenceSummary, fetchSentenceById, fetchSentences, SentenceSummary, patchSentence } from '../../utils/sentenceLoader';
+import { calculatePracticeStats } from '../../utils/practiceStats';
 import { BottomTabBar } from '../../components/mobile/BottomTabBar';
 import { MobileHeader } from '../../components/mobile/MobileHeader';
 import { MobileGreetingOverlay } from '../../components/mobile/MobileGreetingOverlay';
@@ -176,6 +177,42 @@ export const MobileApp: React.FC<MobileAppProps> = ({
     }
   };
 
+  // Handle practice submission with timing and stats
+  const handlePracticeSubmit = async (
+    sentenceId: string,
+    translation: UserTranslation,
+    durationMs?: number
+  ) => {
+    const now = Date.now();
+
+    // Build updates object
+    const updates: Partial<SentencePair> = {
+      lastPracticed: now,
+    };
+
+    // Set translation based on mode
+    if (practiceMode === 'EN_TO_ZH') {
+      updates.userTranslationZh = translation;
+    } else {
+      updates.userTranslationEn = translation;
+    }
+
+    // Calculate practice stats if this is a real submission (not draft)
+    if (translation.type !== 'draft' && durationMs && durationMs > 0) {
+      updates.practiceStats = calculatePracticeStats(
+        selectedSentence?.practiceStats,
+        durationMs,
+        now
+      );
+    }
+
+    // Persist to server
+    const response = await patchSentence(sentenceId, updates);
+    if (response.success && response.data) {
+      handleSentenceUpdate(response.data);
+    }
+  };
+
   // Go back to home from practice
   const handleBackToHome = () => {
     setActiveTab('home');
@@ -271,7 +308,7 @@ export const MobileApp: React.FC<MobileAppProps> = ({
             totalCount={practiceQueue.length}
             onNext={() => handlePracticeNav('next')}
             onPrev={() => handlePracticeNav('prev')}
-            onUpdate={handleSentenceUpdate}
+            onSubmit={handlePracticeSubmit}
             appSettings={appSettings}
           />
         ) : (

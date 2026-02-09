@@ -12,7 +12,7 @@
       "userTranslationZh": {
         "type": "diff",
         "text": "这本书可以被用于课堂教学或者自学。",
-        "timestamp": 1770475379229
+        "timestamp": 1770634251531
       },
       "userTranslationEn": {
         "type": "llm",
@@ -27,10 +27,17 @@
         ],
         "score": 60
       },
-      "lastPracticed": 1770475379229,
+      "lastPracticed": 1770634251531,
       "articleId": "1766188879030_the_translator_s_guide_to_chinglish___forward.json",
       "paragraphOrder": 0,
-      "order": 0
+      "order": 0,
+      "practiceStats": {
+        "attempts": 1,
+        "totalTimeMs": 2547,
+        "lastAttemptMs": 2547,
+        "lastPracticedAt": 1770634251531,
+        "bestTimeMs": 2547
+      }
     },
     {
       "id": "1766188879030_the_translator_s_guide_to_chinglish___forward.json_article-1.md_p0_s1",
@@ -1862,5 +1869,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770630116251
+  "lastModified": 1770634251040
 }

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode, TagInfo, SYSTEM_TAGS } from '../types';
 import { fetchSentences, saveSentences, migrateAllSentences, patchSentence } from '../utils/sentenceLoader';
+import { calculatePracticeStats } from '../utils/practiceStats';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
 import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
@@ -332,22 +333,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
 
         // Update practice stats if this is a real submission (not draft)
         if (translation.type !== 'draft' && durationMs && durationMs > 0) {
-          const existingStats = s.practiceStats || {
-            attempts: 0,
-            totalTimeMs: 0,
-          };
-
-          const newStats: PracticeStats = {
-            attempts: existingStats.attempts + 1,
-            totalTimeMs: existingStats.totalTimeMs + durationMs,
-            lastAttemptMs: durationMs,
-            lastPracticedAt: now,
-            bestTimeMs: existingStats.bestTimeMs
-              ? Math.min(existingStats.bestTimeMs, durationMs)
-              : durationMs,
-          };
-
-          updatedSentence.practiceStats = newStats;
+          updatedSentence.practiceStats = calculatePracticeStats(s.practiceStats, durationMs, now);
         }
 
         return updatedSentence;

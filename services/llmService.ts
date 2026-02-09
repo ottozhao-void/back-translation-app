@@ -507,3 +507,87 @@ export async function generateGreetings(
     };
   }
 }
+
+// ============ Translation Feedback ============
+
+export interface FeedbackResult {
+  success: boolean;
+  data?: {
+    score: number;
+    feedback: string;
+    suggestions: string[];
+  };
+  error?: string;
+}
+
+/**
+ * Get LLM feedback on a user's translation
+ * Uses the 'score' task type to evaluate translation quality
+ *
+ * @param original - The original text (source language)
+ * @param reference - The reference translation
+ * @param userTranslation - The user's translation attempt
+ */
+export async function getTranslationFeedback(
+  original: string,
+  reference: string,
+  userTranslation: string,
+  providerId?: string,
+  modelId?: string
+): Promise<FeedbackResult> {
+  if (!userTranslation.trim()) {
+    return {
+      success: false,
+      error: 'No translation provided',
+    };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.score;
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If no provider configured, return error
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const result = await executeTask<{ score: number; feedback: string; suggestions: string[] }>(
+      'score',
+      providerId,
+      modelId,
+      { original, reference, userTranslation }
+    );
+
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: {
+          score: typeof result.data.score === 'number' ? result.data.score : 0,
+          feedback: result.data.feedback || '',
+          suggestions: Array.isArray(result.data.suggestions) ? result.data.suggestions : [],
+        },
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to get feedback',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

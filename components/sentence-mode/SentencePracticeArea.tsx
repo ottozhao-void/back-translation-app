@@ -3,6 +3,8 @@ import { SentencePair, PracticeMode, UserTranslation, AppSettings } from '../../
 import { SpeakerIcon, ArrowLeftIcon } from '../Icons';
 import { playTextToSpeech } from '../../services/geminiService';
 import { usePracticeTimer } from '../../hooks/usePracticeTimer';
+import { FeedbackSheet, FeedbackData } from '../common/FeedbackSheet';
+import { getTranslationFeedback } from '../../services/llmService';
 
 interface SentencePracticeAreaProps {
   sentence: SentencePair | null;
@@ -25,7 +27,11 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const [copyFeedback, setCopyFeedback] = useState(false);
+  // Feedback sheet state
+  const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedbackData, setFeedbackData] = useState<FeedbackData | undefined>();
+  const [feedbackError, setFeedbackError] = useState<string | undefined>();
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const lastSavedText = useRef('');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,34 +142,38 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     }
   };
 
-  // Generate LLM prompt and copy to clipboard
-  const handleLLMFeedback = async () => {
-    if (!sentence) return;
+  // Get LLM feedback on the translation
+  const handleGetFeedback = async () => {
+    if (!sentence || !inputValue.trim()) return;
 
-    const prompt = `Please evaluate my translation and provide feedback.
+    // Open sheet and show loading
+    setIsFeedbackOpen(true);
+    setFeedbackLoading(true);
+    setFeedbackData(undefined);
+    setFeedbackError(undefined);
 
-**Original Text (${practiceMode === 'EN_TO_ZH' ? 'English' : 'Chinese'}):**
-${sourceText}
+    const result = await getTranslationFeedback(
+      sourceText,
+      referenceText,
+      inputValue
+    );
 
-**Reference Translation (${practiceMode === 'EN_TO_ZH' ? 'Chinese' : 'English'}):**
-${referenceText}
+    setFeedbackLoading(false);
 
-**My Translation:**
-${inputValue}
-
-Please:
-1. Rate my translation on a scale of 1-10
-2. Point out any errors or awkward expressions
-3. Explain what could be improved
-4. Provide a suggested improved version if needed`;
-
-    try {
-      await navigator.clipboard.writeText(prompt);
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
+    if (result.success && result.data) {
+      setFeedbackData(result.data);
+    } else {
+      setFeedbackError(result.error || 'Failed to get feedback');
     }
+  };
+
+  const handleCloseFeedback = () => {
+    setIsFeedbackOpen(false);
+    // Clear data after close animation
+    setTimeout(() => {
+      setFeedbackData(undefined);
+      setFeedbackError(undefined);
+    }, 300);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -361,24 +371,34 @@ Please:
                   {inputValue}
                 </p>
               </div>
-              {/* LLM Feedback Button */}
+              {/* AI Feedback Button */}
               <div className="mt-4 flex justify-end">
                 <button
-                  onClick={handleLLMFeedback}
+                  onClick={handleGetFeedback}
                   className="px-4 py-2 rounded-lg text-sm font-medium transition-all border border-[var(--glass-border)] hover:bg-[var(--surface-hover)] hover:border-[var(--text-secondary)] flex items-center gap-2"
                   style={{ color: 'var(--text-secondary)' }}
-                  title="Copy prompt to clipboard for LLM feedback"
+                  title="Get AI feedback on your translation"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
                   </svg>
-                  {copyFeedback ? 'Copied!' : 'LLM Feedback'}
+                  AI Feedback
                 </button>
               </div>
             </div>
           )}
         </div>
       </div>
+
+      {/* Feedback Sheet */}
+      <FeedbackSheet
+        isOpen={isFeedbackOpen}
+        onClose={handleCloseFeedback}
+        isLoading={feedbackLoading}
+        data={feedbackData}
+        error={feedbackError}
+        onRetry={handleGetFeedback}
+      />
     </div>
   );
 };
