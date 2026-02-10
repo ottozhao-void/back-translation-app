@@ -2,6 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { safeJsonParse, validateFilename, sanitizeErrorMessage, SENTENCE_STORE_SCHEMA, TAG_STORE_SCHEMA, VOCABULARY_STORE_SCHEMA } from './utils/security.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,7 +53,11 @@ function loadLLMSettings() {
   try {
     if (fs.existsSync(llmConfigFile)) {
       const content = fs.readFileSync(llmConfigFile, 'utf-8');
-      const parsed = JSON.parse(content);
+      const parsed = safeJsonParse(content);
+      if (!parsed) {
+        console.error('Failed to parse LLM settings: invalid JSON');
+        return { ...DEFAULT_LLM_SETTINGS };
+      }
       return { ...DEFAULT_LLM_SETTINGS, ...parsed };
     }
   } catch (e) {
@@ -286,7 +291,9 @@ const DEFAULT_TAG_STORE = { version: 1, userTags: [], lastModified: Date.now() }
 function loadTagStore() {
   try {
     if (fs.existsSync(tagsFile)) {
-      return JSON.parse(fs.readFileSync(tagsFile, 'utf-8'));
+      const content = fs.readFileSync(tagsFile, 'utf-8');
+      const parsed = safeJsonParse(content);
+      return parsed || { ...DEFAULT_TAG_STORE };
     }
   } catch (e) {
     console.error('Failed to load tags:', e);
@@ -413,7 +420,9 @@ const DEFAULT_VOCABULARY_STORE = { version: 1, items: [], lastModified: Date.now
 function loadVocabularyStore() {
   try {
     if (fs.existsSync(vocabularyFile)) {
-      return JSON.parse(fs.readFileSync(vocabularyFile, 'utf-8'));
+      const content = fs.readFileSync(vocabularyFile, 'utf-8');
+      const parsed = safeJsonParse(content);
+      return parsed || { ...DEFAULT_VOCABULARY_STORE };
     }
   } catch (e) {
     console.error('Failed to load vocabulary:', e);
@@ -537,11 +546,17 @@ app.post('/api/articles', (req, res) => {
         const { filename, content } = req.body;
         if (!filename || !content) return res.status(400).json({ error: 'Missing filename or content' });
 
+        // Validate filename for security
+        const validation = validateFilename(filename);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         const safeFilename = path.basename(filename);
-        
+
         // Update public (Source of Truth)
         fs.writeFileSync(path.join(articlesDir, safeFilename), content);
-        
+
         // Update dist (Build Output) if it exists
         if (fs.existsSync(distArticlesDir)) {
             fs.writeFileSync(path.join(distArticlesDir, safeFilename), content);
@@ -559,9 +574,19 @@ app.post('/api/articles/rename', (req, res) => {
         const { oldFilename, newFilename } = req.body;
         if (!oldFilename || !newFilename) return res.status(400).json({ error: 'Missing filenames' });
 
+        // Validate both filenames for security
+        const oldValidation = validateFilename(oldFilename);
+        if (!oldValidation.valid) {
+            return res.status(400).json({ error: `Old filename: ${oldValidation.error}` });
+        }
+        const newValidation = validateFilename(newFilename);
+        if (!newValidation.valid) {
+            return res.status(400).json({ error: `New filename: ${newValidation.error}` });
+        }
+
         const safeOldFilename = path.basename(oldFilename);
         const safeNewFilename = path.basename(newFilename);
-        
+
         const oldPath = path.join(articlesDir, safeOldFilename);
         const newPath = path.join(articlesDir, safeNewFilename);
 
@@ -589,11 +614,17 @@ app.delete('/api/articles', (req, res) => {
         const filename = req.query.filename;
         if (!filename) return res.status(400).json({ error: 'Missing filename' });
 
+        // Validate filename for security
+        const validation = validateFilename(filename);
+        if (!validation.valid) {
+            return res.status(400).json({ error: validation.error });
+        }
+
         const safeFilename = path.basename(filename);
         const filePath = path.join(articlesDir, safeFilename);
-        
+
         if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-        
+
         const distFilePath = path.join(distArticlesDir, safeFilename);
         if (fs.existsSync(distFilePath)) fs.unlinkSync(distFilePath);
 
@@ -607,6 +638,13 @@ app.delete('/api/articles', (req, res) => {
 // This ensures that even if dist/ has an old version, we serve the new one
 app.get('/articles/:filename', (req, res, next) => {
     const filename = req.params.filename;
+
+    // Validate filename for security
+    const validation = validateFilename(filename);
+    if (!validation.valid) {
+        return res.status(400).json({ error: validation.error });
+    }
+
     const filePath = path.join(articlesDir, filename);
     if (fs.existsSync(filePath)) {
         res.sendFile(filePath);
@@ -625,7 +663,10 @@ app.get('/api/sentences/summary', (req, res) => {
         }
 
         const content = fs.readFileSync(sentencesFile, 'utf-8');
-        const store = JSON.parse(content);
+        const store = safeJsonParse(content);
+        if (!store || !Array.isArray(store.sentences)) {
+            return res.status(500).json({ success: false, error: 'Invalid sentence store format' });
+        }
 
         const summary = (store.sentences || []).map(s => ({
             id: s.id,
@@ -657,7 +698,10 @@ app.get('/api/sentences/:id', (req, res) => {
         }
 
         const content = fs.readFileSync(sentencesFile, 'utf-8');
-        const store = JSON.parse(content);
+        const store = safeJsonParse(content);
+        if (!store || !Array.isArray(store.sentences)) {
+            return res.status(500).json({ success: false, error: 'Invalid sentence store format' });
+        }
         const sentence = (store.sentences || []).find(s => s.id === id);
 
         if (!sentence) {
@@ -682,7 +726,10 @@ app.patch('/api/sentences/:id', (req, res) => {
         }
 
         const content = fs.readFileSync(sentencesFile, 'utf-8');
-        const store = JSON.parse(content);
+        const store = safeJsonParse(content);
+        if (!store || !Array.isArray(store.sentences)) {
+            return res.status(500).json({ success: false, error: 'Invalid sentence store format' });
+        }
         const index = (store.sentences || []).findIndex(s => s.id === id);
 
         if (index === -1) {

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv, Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { handleLLMRequest } from './server/llm/index';
+import { safeJsonParse, validateFilename } from './utils/security';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,16 +58,30 @@ function setupMiddleware(middlewares: any) {
               try {
                 const body = JSON.parse(Buffer.concat(chunks).toString());
                 const { oldFilename, newFilename } = body;
-                
+
                 if (!oldFilename || !newFilename) {
                   res.statusCode = 400;
                   res.end(JSON.stringify({ error: 'Missing filenames' }));
                   return;
                 }
 
+                // Validate both filenames for security
+                const oldValidation = validateFilename(oldFilename);
+                if (!oldValidation.valid) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: `Old filename: ${oldValidation.error}` }));
+                  return;
+                }
+                const newValidation = validateFilename(newFilename);
+                if (!newValidation.valid) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ error: `New filename: ${newValidation.error}` }));
+                  return;
+                }
+
                 const safeOldFilename = path.basename(oldFilename);
                 const safeNewFilename = path.basename(newFilename);
-                
+
                 const oldPath = path.join(articlesDir, safeOldFilename);
                 const newPath = path.join(articlesDir, safeNewFilename);
 
@@ -280,7 +295,9 @@ function setupMiddleware(middlewares: any) {
           const loadTagStore = () => {
             try {
               if (fs.existsSync(tagsFile)) {
-                return JSON.parse(fs.readFileSync(tagsFile, 'utf-8'));
+                const content = fs.readFileSync(tagsFile, 'utf-8');
+                const parsed = safeJsonParse(content);
+                return parsed || { ...DEFAULT_TAG_STORE };
               }
             } catch (e) {
               console.error('Failed to load tags:', e);
@@ -442,7 +459,9 @@ function setupMiddleware(middlewares: any) {
           const loadVocabularyStore = () => {
             try {
               if (fs.existsSync(vocabularyFile)) {
-                return JSON.parse(fs.readFileSync(vocabularyFile, 'utf-8'));
+                const content = fs.readFileSync(vocabularyFile, 'utf-8');
+                const parsed = safeJsonParse(content);
+                return parsed || { ...DEFAULT_VOCABULARY_STORE };
               }
             } catch (e) {
               console.error('Failed to load vocabulary:', e);

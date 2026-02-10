@@ -10,10 +10,12 @@ import { MobileHome } from './MobileHome';
 import { MobilePractice } from './MobilePractice';
 import { MobileSettings } from './MobileSettings';
 import { MobileHistory } from './MobileHistory';
+import { MobileVocabulary } from './MobileVocabulary';
 import { SearchIcon } from '../../components/Icons';
 import { SearchModal } from '../../components/SearchModal';
+import { useVocabulary } from '../../hooks/useVocabulary';
 
-export type MobileTab = 'home' | 'practice' | 'history' | 'settings';
+export type MobileTab = 'home' | 'practice' | 'vocabulary' | 'history' | 'settings';
 
 interface MobileAppProps {
   appSettings: AppSettings;
@@ -62,6 +64,9 @@ export const MobileApp: React.FC<MobileAppProps> = ({
   // Search modal state
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [userTags, setUserTags] = useState<TagInfo[]>([]);
+
+  // Vocabulary hook
+  const vocabulary = useVocabulary();
 
   // Load sentence summaries on mount
   useEffect(() => {
@@ -282,6 +287,8 @@ export const MobileApp: React.FC<MobileAppProps> = ({
         return <MobileHeader title="Settings" />;
       case 'history':
         return <MobileHeader title="练习历史" />;
+      case 'vocabulary':
+        return <MobileHeader title="生词本" />;
       default:
         return null;
     }
@@ -330,6 +337,15 @@ export const MobileApp: React.FC<MobileAppProps> = ({
           <MobileHistory
             sentences={fullSentences}
             isLoading={isLoadingFullSentences}
+            onNavigateToSentence={handleSelectSentence}
+          />
+        );
+      case 'vocabulary':
+        return (
+          <MobileVocabulary
+            items={vocabulary.items}
+            isLoading={vocabulary.isLoading}
+            onDelete={vocabulary.deleteVocabulary}
             onNavigateToSentence={handleSelectSentence}
           />
         );

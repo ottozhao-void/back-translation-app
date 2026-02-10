@@ -7,6 +7,7 @@
 import type { LLMTaskRequest, LLMTaskResponse, LLMModelParams } from '../../types';
 import { getProviderConfig, getEffectiveParams } from './providers';
 import { buildSystemPrompt, buildUserMessage, parseTaskResponse } from './prompts';
+import { validateProviderUrl, sanitizeErrorMessage } from '../../utils/security';
 
 /**
  * Strip markdown code fences from LLM response if present.
@@ -82,7 +83,16 @@ export async function executeLLMTask(request: LLMTaskRequest): Promise<LLMTaskRe
   // Request JSON response format if supported
   requestBody.response_format = { type: 'json_object' };
 
-  // 5. Call OpenAI-compatible API
+  // 5. Validate provider URL (SSRF protection)
+  const urlValidation = validateProviderUrl(provider.baseUrl);
+  if (!urlValidation.valid) {
+    return {
+      success: false,
+      error: urlValidation.error || 'Invalid provider URL',
+    };
+  }
+
+  // 6. Call OpenAI-compatible API
   try {
     const apiUrl = `${provider.baseUrl.replace(/\/$/, '')}/chat/completions`;
 
@@ -99,7 +109,7 @@ export async function executeLLMTask(request: LLMTaskRequest): Promise<LLMTaskRe
       const errorText = await response.text();
       return {
         success: false,
-        error: `API error (${response.status}): ${errorText}`,
+        error: sanitizeErrorMessage(`API error (${response.status})`),
       };
     }
 
@@ -154,6 +164,15 @@ export async function executeLLMTask(request: LLMTaskRequest): Promise<LLMTaskRe
  * Fetch available models from a provider
  */
 export async function fetchModels(baseUrl: string, apiKey: string): Promise<{ success: boolean; models?: string[]; error?: string }> {
+  // Validate provider URL (SSRF protection)
+  const urlValidation = validateProviderUrl(baseUrl);
+  if (!urlValidation.valid) {
+    return {
+      success: false,
+      error: urlValidation.error || 'Invalid provider URL',
+    };
+  }
+
   try {
     const apiUrl = `${baseUrl.replace(/\/$/, '')}/models`;
 
@@ -168,7 +187,7 @@ export async function fetchModels(baseUrl: string, apiKey: string): Promise<{ su
       const errorText = await response.text();
       return {
         success: false,
-        error: `API error (${response.status}): ${errorText}`,
+        error: sanitizeErrorMessage(`API error (${response.status})`),
       };
     }
 

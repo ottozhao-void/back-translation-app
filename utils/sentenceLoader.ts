@@ -318,8 +318,16 @@ export const filterSentences = (
       return sorted;
 
     case 'random':
-      const shuffled = [...sentences].sort(() => Math.random() - 0.5);
-      return filter.count ? shuffled.slice(0, filter.count) : shuffled;
+      // Fisher-Yates shuffle algorithm for uniform distribution
+      const shuffled = [...sentences];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const count = filter.count && filter.count < shuffled.length
+        ? filter.count
+        : shuffled.length;
+      return shuffled.slice(0, count);
 
     case 'tag':
       return sentences.filter(s => s.tags?.includes(filter.tag));
