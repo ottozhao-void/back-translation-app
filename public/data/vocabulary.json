@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "vocab_1770694430134_dfid",
+      "text": "Takes the Top Spot",
+      "normalizedText": "takes the top spot",
+      "type": "pattern",
+      "definition": "To achieve the first position in a ranking, competition, or list. This phrase is commonly used in business, sports, and news to describe someone or something becoming the most successful, popular, or productive in a specific category.",
+      "examples": [
+        {
+          "en": "Despite strong competition from major brands, the new smartphone took the top spot in customer satisfaction surveys.",
+          "zh": "尽管面临各大品牌的激烈竞争，这款新款智能手机在客户满意度调查中仍位居榜首。"
+        },
+        {
+          "en": "The young athlete performed a flawless routine and took the top spot on the podium.",
+          "zh": "这位年轻的运动员表现完美，登上了领奖台的最高位置。"
+        },
+        {
+          "en": "With its recent expansion, the city has now taken the top spot as the country's main financial hub.",
+          "zh": "随着近期的扩张，该城市现已取代其他城市，成为该国最主要的金融中心。"
+        }
+      ],
+      "sources": [
+        {
+          "sentenceId": "article_1770384510650_s0",
+          "en": "Global R&D Shift: China Takes the Top Spot",
+          "zh": "全球研发格局变迁：中国首次登顶",
+          "addedAt": 1770694430134
+        }
+      ],
+      "status": "enriched",
+      "createdAt": 1770694430134,
+      "updatedAt": 1770694439417,
+      "definitionZh": "指在排名、竞争或榜单中位居第一。该短语常用于商业、体育和新闻领域，描述某人或某事在特定类别中成为最成功、最受欢迎或产量最高的。"
+    },
+    {
+      "id": "vocab_1770646884791_k9bu",
+      "text": "faucet",
+      "normalizedText": "faucet",
+      "type": "word",
+      "definition": "A device used to control the flow of liquid (especially water) from a pipe. In technical writing, it is often used as a metaphor for a continuous stream of data that can be started, stopped, or managed, rather than a single static object.",
+      "examples": [
+        {
+          "en": "Please make sure the kitchen faucet is turned off completely before you leave.",
+          "zh": "请确保在你离开之前厨房的水龙头已经完全关掉了。"
+        },
+        {
+          "en": "If the data source is like a faucet, the buffer is like a bucket that catches the water as it flows.",
+          "zh": "如果数据源像一个水龙头，那么缓冲区就像一个在水流出时接水的桶。"
+        },
+        {
+          "en": "The plumber arrived this morning to fix the leaky faucet in the bathroom faucet.",
+          "zh": "水管工今天早上来修理浴室里漏水的水龙头了。"
+        }
+      ],
+      "sources": [
+        {
+          "sentenceId": "sent_1770442289687_obsg",
+          "en": "HTTP requests arrive as a Stream (like a faucet of water), not a single block of data.",
+          "zh": "HTTP请求以流的形式到达（如同水龙头的水流），而非单一数据块。",
+          "addedAt": 1770646884791
+        }
+      ],
+      "status": "manual",
+      "createdAt": 1770646884791,
+      "updatedAt": 1770690013472,
+      "definitionZh": "水龙头。指通过管道控制液体（尤其是水）流出的装置。在技术文档中，它常被用来比喻持续不断的数据流，强调数据是可以被开启、关闭或管理的，而不是一个整体的数据块。"
+    }
+  ],
+  "lastModified": 1770694439417
+}

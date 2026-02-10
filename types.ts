@@ -138,6 +138,9 @@ export interface SentencePair {
   tags?: string[];               // User-defined tags for filtering
   practiceStats?: PracticeStats; // Practice performance metrics
 
+  // Semantic analysis (optional, generated on demand)
+  analysis?: SentenceAnalysis;   // EN analysis only (optional, backward compatible)
+
   // Legacy field (for migration compatibility)
   sourceIndex?: number;          // @deprecated Use 'order' instead
 }
@@ -233,6 +236,9 @@ export type LLMTaskType =
   | 'translate'         // Translate text
   | 'score'             // Score user translation quality
   | 'greeting'          // Generate personalized greetings
+  | 'enrich-vocab'      // Generate definition + examples for vocabulary
+  | 'suggest-pattern'   // Extract patterns from sentence
+  | 'analyze-sentence'  // Semantic analysis for vocabulary collection
   | 'custom';           // Custom task with user-provided prompt
 
 /**
@@ -328,3 +334,137 @@ export interface HistoryFilterState {
   preset: TimeFilterPreset;
   customRange?: { start: number; end: number };  // 未来扩展：自定义日期范围
 }
+
+// === Vocabulary System Types ===
+
+/**
+ * Vocabulary item types
+ */
+export type VocabularyType = 'word' | 'collocation' | 'pattern';
+
+/**
+ * Semantic Analysis Result
+ * LLM-generated breakdown of a sentence into interactive units
+ */
+export interface SentenceAnalysis {
+  tokens: Array<{
+    text: string;        // The actual word/token
+    index: number;       // Starting position in original sentence
+    length: number;      // Character length
+    lemma?: string;      // Root form (e.g., "went" -> "go")
+    isStopword: boolean; // Whether filtered as basic stopword
+  }>;
+
+  chunks: Array<{
+    text: string;        // "take for granted"
+    indices: number[];   // Token indices [3, 4, 5]
+    type: 'idiom' | 'collocation' | 'phrasal_verb';
+    translation?: string; // Optional Chinese translation
+  }>;
+
+  patterns: Array<{
+    id: string;          // Unique identifier
+    template: string;    // "so … that …"
+    explanation: string; // English explanation of how to use this pattern
+    examples: Array<{ en: string; zh: string }>; // Example sentences (EN + ZH)
+    anchors: Array<{
+      text: string;      // "so", "that"
+      index: number;     // Token index
+    }>;
+    matchedText: string; // The actual text in sentence
+  }>;
+}
+
+/**
+ * Interactive semantic unit for click handling
+ */
+export interface SemanticUnit {
+  text: string;
+  type: 'word' | 'collocation' | 'pattern';
+  startIndex: number;
+  endIndex: number;
+  chunkIndex?: number;
+  patternId?: string;
+}
+
+/**
+ * Vocabulary enrichment status
+ * - pending: Saved but LLM content not yet generated
+ * - enriched: LLM has generated definition and examples
+ * - manual: User manually entered content (no LLM)
+ */
+export type VocabularyStatus = 'pending' | 'enriched' | 'manual';
+
+/**
+ * Bilingual example sentence
+ */
+export interface VocabularyExample {
+  en: string;
+  zh: string;
+}
+
+/**
+ * Source sentence reference
+ * Denormalized for display without loading full sentence
+ */
+export interface VocabularySource {
+  sentenceId: string;
+  en: string;           // Cached sentence text for display
+  zh: string;           // Cached sentence text for display
+  addedAt: number;      // When this link was created
+}
+
+/**
+ * Core vocabulary item
+ * Unified model for words, collocations, and patterns
+ */
+export interface VocabularyItem {
+  id: string;                       // UUID (e.g., "vocab_1234567890_a1b2")
+  text: string;                     // The word/phrase/pattern as selected
+  normalizedText: string;           // Lowercase, trimmed for dedup matching
+  type: VocabularyType;
+
+  // LLM-generated or user-edited content
+  definition: string;               // English explanation
+  definitionZh?: string;            // Optional Chinese explanation
+  examples: VocabularyExample[];    // 2-3 example sentences
+
+  // For patterns only
+  patternTemplate?: string;         // e.g., "so ... that ..." with slots
+  patternExplanation?: string;      // How to use the pattern
+
+  // User content
+  note?: string;                    // Personal notes
+  tags?: string[];                  // User-defined tags (reuse tag system)
+
+  // Relationships
+  sources: VocabularySource[];      // Source sentences (multiple allowed)
+
+  // Metadata
+  status: VocabularyStatus;
+  createdAt: number;
+  updatedAt: number;
+
+  // Future: SRS fields (not implemented in V1)
+  // masteryLevel?: number;
+  // nextReviewAt?: number;
+  // reviewHistory?: ReviewRecord[];
+}
+
+/**
+ * Vocabulary store structure for persistence
+ */
+export interface VocabularyStore {
+  version: number;                  // Data version for migrations
+  items: VocabularyItem[];
+  lastModified: number;
+}
+
+/**
+ * Default empty vocabulary store
+ */
+export const DEFAULT_VOCABULARY_STORE: VocabularyStore = {
+  version: 1,
+  items: [],
+  lastModified: Date.now(),
+};

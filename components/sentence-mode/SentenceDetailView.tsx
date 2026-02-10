@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { SentencePair, PracticeMode, TagInfo } from '../../types';
+import { SentencePair, PracticeMode, TagInfo, VocabularyType } from '../../types';
 import { CardCarousel, CardConfig, SentenceInfoCard, StatsCard, VocabularyCard } from './cards';
 
 interface SentenceDetailViewProps {
@@ -16,6 +16,9 @@ interface SentenceDetailViewProps {
   allTags?: TagInfo[];
   onToggleTag?: (tagId: string) => void;
   onOpenTagPicker?: () => void;
+  // Vocabulary props
+  onAddVocabulary?: (text: string, type: VocabularyType) => void;
+  onAddPattern?: (text: string, template: string, explanation: string) => void;
 }
 
 /**
@@ -41,6 +44,8 @@ export const SentenceDetailView: React.FC<SentenceDetailViewProps> = ({
   allTags = [],
   onToggleTag,
   onOpenTagPicker,
+  onAddVocabulary,
+  onAddPattern,
 }) => {
   // Current card index for carousel
   const [cardIndex, setCardIndex] = useState(0);
@@ -69,6 +74,8 @@ export const SentenceDetailView: React.FC<SentenceDetailViewProps> = ({
           allTags={allTags}
           onToggleTag={onToggleTag}
           onOpenTagPicker={onOpenTagPicker}
+          onAddVocabulary={onAddVocabulary}
+          onAddPattern={onAddPattern}
         />
       ),
     },

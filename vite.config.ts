@@ -30,6 +30,8 @@ function setupMiddleware(middlewares: any) {
         const distSentencesFile = path.join(distDataDir, 'sentences.json');
         const tagsFile = path.join(dataDir, 'tags.json');
         const distTagsFile = path.join(distDataDir, 'tags.json');
+        const vocabularyFile = path.join(dataDir, 'vocabulary.json');
+        const distVocabularyFile = path.join(distDataDir, 'vocabulary.json');
 
         if (!fs.existsSync(articlesDir)) {
           fs.mkdirSync(articlesDir, { recursive: true });
@@ -431,6 +433,152 @@ function setupMiddleware(middlewares: any) {
               }
             });
             return;
+          }
+
+          // === Vocabulary API Routes ===
+          const DEFAULT_VOCABULARY_STORE = { version: 1, items: [], lastModified: Date.now() };
+
+          // Helper to load vocabulary store
+          const loadVocabularyStore = () => {
+            try {
+              if (fs.existsSync(vocabularyFile)) {
+                return JSON.parse(fs.readFileSync(vocabularyFile, 'utf-8'));
+              }
+            } catch (e) {
+              console.error('Failed to load vocabulary:', e);
+            }
+            return { ...DEFAULT_VOCABULARY_STORE };
+          };
+
+          // Helper to save vocabulary store
+          const saveVocabularyStore = (store: any) => {
+            const content = JSON.stringify(store, null, 2);
+            fs.writeFileSync(vocabularyFile, content);
+            if (fs.existsSync(distDataDir)) {
+              fs.writeFileSync(distVocabularyFile, content);
+            }
+          };
+
+          // GET /api/vocabulary - Get all vocabulary items
+          if (url.pathname === '/api/vocabulary' && req.method === 'GET') {
+            try {
+              const store = loadVocabularyStore();
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ success: true, data: store }));
+            } catch (e) {
+              console.error('Failed to get vocabulary:', e);
+              res.statusCode = 500;
+              res.end(JSON.stringify({ success: false, error: 'Failed to get vocabulary' }));
+            }
+            return;
+          }
+
+          // POST /api/vocabulary - Save full vocabulary store
+          if (url.pathname === '/api/vocabulary' && req.method === 'POST') {
+            const chunks: Buffer[] = [];
+            req.on('data', (chunk: any) => chunks.push(chunk));
+            req.on('end', () => {
+              try {
+                const store = JSON.parse(Buffer.concat(chunks).toString());
+                if (!store || !Array.isArray(store.items)) {
+                  res.statusCode = 400;
+                  res.end(JSON.stringify({ success: false, error: 'Invalid vocabulary store format' }));
+                  return;
+                }
+                store.lastModified = Date.now();
+                saveVocabularyStore(store);
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, count: store.items.length }));
+              } catch (e) {
+                console.error('Failed to save vocabulary:', e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ success: false, error: 'Failed to save vocabulary' }));
+              }
+            });
+            return;
+          }
+
+          // GET/PATCH/DELETE /api/vocabulary/:id - Single item operations
+          const vocabIdMatch = url.pathname.match(/^\/api\/vocabulary\/([^/]+)$/);
+          if (vocabIdMatch) {
+            const vocabId = decodeURIComponent(vocabIdMatch[1]);
+
+            if (req.method === 'GET') {
+              try {
+                const store = loadVocabularyStore();
+                const item = (store.items || []).find((v: any) => v.id === vocabId);
+
+                if (!item) {
+                  res.statusCode = 404;
+                  res.end(JSON.stringify({ success: false, error: 'Vocabulary item not found' }));
+                  return;
+                }
+
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true, data: item }));
+              } catch (e) {
+                console.error('Failed to get vocabulary item:', e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ success: false, error: 'Failed to get vocabulary item' }));
+              }
+              return;
+            }
+
+            if (req.method === 'PATCH') {
+              const chunks: Buffer[] = [];
+              req.on('data', (chunk: any) => chunks.push(chunk));
+              req.on('end', () => {
+                try {
+                  const updates = JSON.parse(Buffer.concat(chunks).toString());
+                  const store = loadVocabularyStore();
+                  const index = (store.items || []).findIndex((v: any) => v.id === vocabId);
+
+                  if (index === -1) {
+                    res.statusCode = 404;
+                    res.end(JSON.stringify({ success: false, error: 'Vocabulary item not found' }));
+                    return;
+                  }
+
+                  // Merge updates
+                  store.items[index] = { ...store.items[index], ...updates, updatedAt: Date.now() };
+                  store.lastModified = Date.now();
+                  saveVocabularyStore(store);
+
+                  res.setHeader('Content-Type', 'application/json');
+                  res.end(JSON.stringify({ success: true, data: store.items[index] }));
+                } catch (e) {
+                  console.error('Failed to patch vocabulary item:', e);
+                  res.statusCode = 500;
+                  res.end(JSON.stringify({ success: false, error: 'Failed to patch vocabulary item' }));
+                }
+              });
+              return;
+            }
+
+            if (req.method === 'DELETE') {
+              try {
+                const store = loadVocabularyStore();
+                const initialLength = store.items?.length || 0;
+                store.items = (store.items || []).filter((v: any) => v.id !== vocabId);
+
+                if (store.items.length === initialLength) {
+                  res.statusCode = 404;
+                  res.end(JSON.stringify({ success: false, error: 'Vocabulary item not found' }));
+                  return;
+                }
+
+                store.lastModified = Date.now();
+                saveVocabularyStore(store);
+
+                res.setHeader('Content-Type', 'application/json');
+                res.end(JSON.stringify({ success: true }));
+              } catch (e) {
+                console.error('Failed to delete vocabulary item:', e);
+                res.statusCode = 500;
+                res.end(JSON.stringify({ success: false, error: 'Failed to delete vocabulary item' }));
+              }
+              return;
+            }
           }
 
           if (url.pathname === '/api/articles') {

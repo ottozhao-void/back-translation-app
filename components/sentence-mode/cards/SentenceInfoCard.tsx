@@ -1,9 +1,20 @@
-import React, { useState } from 'react';
-import { SentencePair, PracticeMode, TagInfo } from '../../../types';
-import { SpeakerIcon, PencilIcon } from '../../Icons';
+import React, { useState, useCallback } from 'react';
+import { SentencePair, PracticeMode, TagInfo, VocabularyType, SentenceAnalysis, SemanticUnit } from '../../../types';
+import { SpeakerIcon, PencilIcon, MagicWandIcon } from '../../Icons';
 import { playTextToSpeech } from '../../../services/geminiService';
 import { TextEditModal } from '../TextEditModal';
 import { TagChip } from '../TagChip';
+import { TextSelectionPopover, PatternSuggestionModal } from '../../vocabulary';
+import { suggestPatterns, analyzeSentence } from '../../../services/llmService';
+import { InteractiveSentenceRenderer } from '../InteractiveSentenceRenderer';
+import { PatternChips } from '../PatternChips';
+import { SemanticUnitPopover } from '../SemanticUnitPopover';
+
+interface PatternSuggestion {
+  text: string;
+  template: string;
+  explanation: string;
+}
 
 interface SentenceInfoCardProps {
   sentence: SentencePair;
@@ -19,6 +30,9 @@ interface SentenceInfoCardProps {
   allTags?: TagInfo[];
   onToggleTag?: (tagId: string) => void;
   onOpenTagPicker?: () => void;
+  // Vocabulary props
+  onAddVocabulary?: (text: string, type: VocabularyType) => void;
+  onAddPattern?: (text: string, template: string, explanation: string) => void;
 }
 
 /**
@@ -40,12 +54,192 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
   allTags = [],
   onToggleTag,
   onOpenTagPicker,
+  onAddVocabulary,
+  onAddPattern,
 }) => {
   // State to temporarily reveal the hidden reference
   const [isReferenceRevealed, setIsReferenceRevealed] = useState(false);
 
   // State for edit modal
   const [editingField, setEditingField] = useState<'en' | 'zh' | null>(null);
+
+  // Text selection state
+  const [selection, setSelection] = useState<{
+    text: string;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  // Pattern suggestion modal state
+  const [patternModal, setPatternModal] = useState<{
+    isOpen: boolean;
+    isLoading: boolean;
+    patterns: PatternSuggestion[];
+    error?: string;
+  }>({ isOpen: false, isLoading: false, patterns: [] });
+
+  // Semantic analysis state
+  const [analysisState, setAnalysisState] = useState<{
+    status: 'none' | 'loading' | 'completed' | 'error';
+    data?: SentenceAnalysis;
+    error?: string;
+  }>({ status: 'none' });
+
+  const [hoveredPatternId, setHoveredPatternId] = useState<string | null>(null);
+
+  const [selectedUnit, setSelectedUnit] = useState<{
+    unit: SemanticUnit;
+    position: { x: number; y: number };
+  } | null>(null);
+
+  // Handle text selection
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+    // Only handle selection when not in interactive mode
+    if (analysisState.status === 'completed') return;
+
+    const selectedText = window.getSelection()?.toString().trim();
+    if (selectedText && selectedText.length > 0 && selectedText.length < 200) {
+      // Get selection position
+      const selectionObj = window.getSelection();
+      if (selectionObj && selectionObj.rangeCount > 0) {
+        const range = selectionObj.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+        setSelection({
+          text: selectedText,
+          position: {
+            x: rect.left + rect.width / 2,
+            y: rect.top,
+          },
+        });
+      }
+    } else {
+      // Clear selection if clicking without selecting
+      setSelection(null);
+    }
+  }, [analysisState.status]);
+
+  // Handle adding vocabulary
+  const handleAddWord = useCallback(() => {
+    if (selection && onAddVocabulary) {
+      onAddVocabulary(selection.text, 'word');
+      setSelection(null);
+      window.getSelection()?.removeAllRanges();
+    }
+  }, [selection, onAddVocabulary]);
+
+  const handleAddCollocation = useCallback(() => {
+    if (selection && onAddVocabulary) {
+      onAddVocabulary(selection.text, 'collocation');
+      setSelection(null);
+      window.getSelection()?.removeAllRanges();
+    }
+  }, [selection, onAddVocabulary]);
+
+  // Handle pattern suggestion
+  const handleSuggestPatterns = useCallback(async () => {
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+
+    setPatternModal({ isOpen: true, isLoading: true, patterns: [] });
+
+    try {
+      const result = await suggestPatterns(sentence.en, sentence.zh);
+      if (result.success && result.patterns) {
+        setPatternModal({
+          isOpen: true,
+          isLoading: false,
+          patterns: result.patterns,
+        });
+      } else {
+        setPatternModal({
+          isOpen: true,
+          isLoading: false,
+          patterns: [],
+          error: result.error || 'Failed to get pattern suggestions',
+        });
+      }
+    } catch (error) {
+      setPatternModal({
+        isOpen: true,
+        isLoading: false,
+        patterns: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+  }, [sentence.en, sentence.zh]);
+
+  // Handle adding patterns from modal
+  const handleAddPatterns = useCallback((patterns: PatternSuggestion[]) => {
+    if (onAddPattern) {
+      patterns.forEach(p => {
+        onAddPattern(p.text, p.template, p.explanation);
+      });
+    }
+  }, [onAddPattern]);
+
+  // Close selection popover
+  const handleCloseSelection = useCallback(() => {
+    setSelection(null);
+    window.getSelection()?.removeAllRanges();
+  }, []);
+
+  // Handler for magic analyze button
+  const handleMagicAnalyze = useCallback(async () => {
+    // Check if already analyzed
+    if (sentence.analysis) {
+      setAnalysisState({ status: 'completed', data: sentence.analysis });
+      return;
+    }
+
+    setAnalysisState({ status: 'loading' });
+
+    const result = await analyzeSentence(sentence.en, sentence.zh);
+
+    if (result.success && result.data) {
+      const analysis: SentenceAnalysis = {
+        tokens: result.data.tokens,
+        chunks: result.data.chunks,
+        patterns: result.data.patterns,
+      };
+      setAnalysisState({ status: 'completed', data: analysis });
+      // Persist to sentence
+      if (onUpdateSentence) {
+        onUpdateSentence(sentence.id, { analysis });
+      }
+    } else {
+      setAnalysisState({
+        status: 'error',
+        error: result.error || 'Analysis failed'
+      });
+    }
+  }, [sentence, onUpdateSentence]);
+
+  // Handler for semantic unit clicks
+  const handleUnitClick = useCallback((unit: SemanticUnit, position: { x: number; y: number }) => {
+    setSelectedUnit({ unit, position });
+  }, []);
+
+  // Handler for pattern chip clicks
+  const handlePatternClick = useCallback((pattern: SentenceAnalysis['patterns'][0]) => {
+    // Convert pattern to semantic unit
+    setSelectedUnit({
+      unit: {
+        text: pattern.matchedText || pattern.template,
+        type: 'pattern',
+        startIndex: 0,
+        endIndex: pattern.matchedText?.length || pattern.template.length,
+        patternId: pattern.id,
+      },
+      position: { x: window.innerWidth / 2, y: 200 },
+    });
+  }, []);
+
+  // Handler for adding from popover
+  const handleAddFromPopover = useCallback((text: string, type: VocabularyType) => {
+    if (onAddVocabulary) {
+      onAddVocabulary(text, type);
+    }
+    setSelectedUnit(null);
+  }, [onAddVocabulary]);
 
   // Determine which text is the "reference" (the answer) based on practice mode
   const isEnToZh = practiceMode === 'EN_TO_ZH';
@@ -142,7 +336,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
           </div>
 
           {/* Source Text */}
-          <div className="mb-6 group/source">
+          <div className="mb-6 group/source" onMouseUp={handleMouseUp}>
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-mono uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
                 {sourceLabel}
@@ -155,11 +349,39 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
               >
                 <SpeakerIcon />
               </button>
+
+              {/* Analysis status indicator */}
+              {analysisState.status === 'loading' && (
+                <span className="text-xs" style={{ color: 'var(--accent-blue, #60A5FA)' }}>
+                  Analyzing...
+                </span>
+              )}
+              {analysisState.status === 'error' && (
+                <span className="text-xs text-red-400" title={analysisState.error}>
+                  Analysis failed
+                </span>
+              )}
             </div>
+
             <div className="relative">
-              <p className="text-xl leading-relaxed font-serif-sc pr-16" style={{ color: 'var(--text-main)' }}>
-                {sourceText}
-              </p>
+              {/* Interactive or static text rendering */}
+              {analysisState.status === 'completed' && analysisState.data && isEnToZh ? (
+                <InteractiveSentenceRenderer
+                  sentence={sourceText}
+                  analysis={analysisState.data}
+                  onUnitClick={handleUnitClick}
+                  hoveredPatternId={hoveredPatternId}
+                />
+              ) : (
+                <p
+                  className="text-xl leading-relaxed font-serif-sc select-text cursor-text"
+                  style={{ color: 'var(--text-main)' }}
+                >
+                  {sourceText}
+                </p>
+              )}
+
+              {/* Edit button - top right */}
               {onUpdateSentence && (
                 <button
                   onClick={() => setEditingField(sourceField as 'en' | 'zh')}
@@ -170,7 +392,36 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
                   <PencilIcon />
                 </button>
               )}
+
+              {/* Magic Analyze Button - Below edit icon, only for English in EN_TO_ZH mode */}
+              {isEnToZh && onUpdateSentence && (
+                <button
+                  onClick={handleMagicAnalyze}
+                  disabled={analysisState.status === 'loading'}
+                  className="absolute top-8 right-0 p-2 rounded-lg opacity-0 group-hover/source:opacity-100 transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+                  style={{
+                    color: analysisState.status === 'completed' ? 'var(--accent-yellow, #FBBF24)' : 'var(--text-secondary)',
+                  }}
+                  title={
+                    analysisState.status === 'completed' ? 'Sentence analyzed - click words to add vocabulary' :
+                    analysisState.status === 'loading' ? 'Analyzing...' :
+                    'AI Analyze - Click to find vocabulary'
+                  }
+                >
+                  <MagicWandIcon />
+                </button>
+              )}
             </div>
+
+            {/* Pattern Chips - Display below source text when analyzed */}
+            {analysisState.status === 'completed' && analysisState.data?.patterns && isEnToZh && (
+              <PatternChips
+                patterns={analysisState.data.patterns}
+                hoveredPatternId={hoveredPatternId}
+                onPatternHover={setHoveredPatternId}
+                onPatternClick={handlePatternClick}
+              />
+            )}
           </div>
 
           {/* Divider */}
@@ -271,6 +522,39 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
           initialValue={editingField === 'en' ? sentence.en : sentence.zh}
           onSave={handleSaveEdit}
           onCancel={() => setEditingField(null)}
+        />
+      )}
+
+      {/* Text Selection Popover */}
+      {selection && onAddVocabulary && (
+        <TextSelectionPopover
+          selectedText={selection.text}
+          position={selection.position}
+          onAddWord={handleAddWord}
+          onAddCollocation={handleAddCollocation}
+          onSuggestPatterns={handleSuggestPatterns}
+          onClose={handleCloseSelection}
+        />
+      )}
+
+      {/* Pattern Suggestion Modal */}
+      {patternModal.isOpen && (
+        <PatternSuggestionModal
+          patterns={patternModal.patterns}
+          isLoading={patternModal.isLoading}
+          error={patternModal.error}
+          onAddPatterns={handleAddPatterns}
+          onClose={() => setPatternModal({ isOpen: false, isLoading: false, patterns: [] })}
+        />
+      )}
+
+      {/* Semantic Unit Popover */}
+      {selectedUnit && (
+        <SemanticUnitPopover
+          unit={selectedUnit.unit}
+          position={selectedUnit.position}
+          onAddToVocabulary={handleAddFromPopover}
+          onClose={() => setSelectedUnit(null)}
         />
       )}
     </div>

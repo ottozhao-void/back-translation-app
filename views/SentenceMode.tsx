@@ -16,6 +16,8 @@ import { ToastContainer, useToast } from '../components/Toast';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { LoadingSpinner } from '../components/Skeleton';
 import { GreetingDisplay } from '../components/GreetingDisplay';
+import { VocabularySidebar, VocabularyDetailCard } from '../components/vocabulary';
+import { useVocabulary } from '../hooks/useVocabulary';
 
 // Helper to match hotkey
 const matchesHotkey = (e: KeyboardEvent, hotkeyString: string): boolean => {
@@ -167,6 +169,32 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
+  // Vocabulary system state
+  const vocabulary = useVocabulary();
+  const [vocabSidebarCollapsed, setVocabSidebarCollapsed] = useState(true); // Collapsed by default
+  const [selectedVocabId, setSelectedVocabId] = useState<string | null>(null);
+
+  // Toggle vocabulary sidebar
+  const toggleVocabSidebar = useCallback(() => {
+    setVocabSidebarCollapsed(prev => !prev);
+  }, []);
+
+  // Handle vocabulary item selection
+  const handleSelectVocabItem = useCallback((id: string) => {
+    setSelectedVocabId(id);
+    setSelectedId(null); // Deselect sentence when viewing vocab
+  }, []);
+
+  // Handle navigating from vocab detail to sentence
+  const handleVocabNavigateToSentence = useCallback((sentenceId: string) => {
+    setSelectedVocabId(null);
+    setSelectedId(sentenceId);
+    setViewMode('detail');
+  }, []);
+
+  // Get selected vocabulary item
+  const selectedVocabItem = selectedVocabId ? vocabulary.getById(selectedVocabId) : null;
+
   // Toast and soft delete states
   const { toasts, dismissToast, showSuccess, showError } = useToast();
   const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<SentencePair | null>(null);
@@ -192,10 +220,16 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         e.preventDefault();
         toggleSidebar();
       }
+
+      // Vocabulary sidebar toggle (Ctrl+Shift+V)
+      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'V') {
+        e.preventDefault();
+        toggleVocabSidebar();
+      }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar, appSettings.hotkeys]);
+  }, [toggleSidebar, toggleVocabSidebar, appSettings.hotkeys]);
 
   // Load sentences on mount, auto-migrate if needed
   useEffect(() => {
@@ -461,8 +495,19 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         </div>
       </button>
 
-      {/* Main Content Area - Detail View or Practice Area */}
-      {currentSentence ? (
+      {/* Main Content Area - Sentence Detail, Vocabulary Detail, or Practice Area */}
+      {selectedVocabItem ? (
+        <VocabularyDetailCard
+          item={selectedVocabItem}
+          onUpdate={vocabulary.updateVocabulary}
+          onDelete={(id) => {
+            vocabulary.deleteVocabulary(id);
+            setSelectedVocabId(null);
+          }}
+          onNavigateToSentence={handleVocabNavigateToSentence}
+          onEnrichPending={vocabulary.enrichPending}
+        />
+      ) : currentSentence ? (
         <div className="flex-1 flex flex-col min-w-0">
           {/* Content */}
           {viewMode === 'detail' ? (
@@ -479,6 +524,8 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
               allTags={[...Object.values(SYSTEM_TAGS), ...userTags]}
               onToggleTag={(tagId) => handleToggleTag(currentSentence.id, tagId)}
               onOpenTagPicker={() => handleOpenTagPicker(currentSentence.id)}
+              onAddVocabulary={(text, type) => vocabulary.addVocabulary(text, type, currentSentence)}
+              onAddPattern={(text, template, explanation) => vocabulary.addPattern(text, template, explanation, currentSentence)}
             />
           ) : (
             <SentencePracticeArea
@@ -500,6 +547,15 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           />
         </div>
       )}
+
+      {/* Vocabulary Sidebar (Right) */}
+      <VocabularySidebar
+        items={vocabulary.items}
+        selectedId={selectedVocabId}
+        onSelectItem={handleSelectVocabItem}
+        isCollapsed={vocabSidebarCollapsed}
+        onToggleCollapse={toggleVocabSidebar}
+      />
 
       {/* Import Modal */}
       {showImportModal && (

@@ -1675,6 +1675,115 @@
         "type": "draft",
         "text": "qqqqq",
         "timestamp": 1770428715865
+      },
+      "analysis": {
+        "tokens": [
+          {
+            "text": "Global",
+            "index": 0,
+            "length": 6,
+            "lemma": "global",
+            "isStopword": false
+          },
+          {
+            "text": "R&D",
+            "index": 7,
+            "length": 3,
+            "lemma": "R&D",
+            "isStopword": false
+          },
+          {
+            "text": "Shift",
+            "index": 11,
+            "length": 5,
+            "lemma": "shift",
+            "isStopword": false
+          },
+          {
+            "text": "China",
+            "index": 18,
+            "length": 5,
+            "lemma": "China",
+            "isStopword": false
+          },
+          {
+            "text": "Takes",
+            "index": 24,
+            "length": 5,
+            "lemma": "take",
+            "isStopword": false
+          },
+          {
+            "text": "Top",
+            "index": 34,
+            "length": 3,
+            "lemma": "top",
+            "isStopword": false
+          },
+          {
+            "text": "Spot",
+            "index": 38,
+            "length": 4,
+            "lemma": "spot",
+            "isStopword": false
+          }
+        ],
+        "chunks": [
+          {
+            "text": "take the top spot",
+            "indices": [
+              5,
+              6,
+              7,
+              8
+            ],
+            "type": "idiom"
+          },
+          {
+            "text": "top spot",
+            "indices": [
+              7,
+              8
+            ],
+            "type": "collocation"
+          }
+        ],
+        "patterns": [
+          {
+            "id": "pattern-1",
+            "template": "take the top spot",
+            "explanation": "Used to describe achieving the first place or most prominent position in a ranking or competition.",
+            "examples": [
+              {
+                "en": "The young athlete took the top spot in the marathon.",
+                "zh": "这位年轻的运动员在马拉松比赛中夺得冠军。"
+              },
+              {
+                "en": "Electric vehicles are expected to take the top spot in the market soon.",
+                "zh": "预计电动汽车很快将占据市场的主导地位。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "Takes",
+                "index": 24
+              },
+              {
+                "text": "the",
+                "index": 30
+              },
+              {
+                "text": "Top",
+                "index": 34
+              },
+              {
+                "text": "Spot",
+                "index": 38
+              }
+            ],
+            "matchedText": "Takes the Top Spot"
+          }
+        ]
       }
     },
     {
@@ -1869,5 +1978,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770634251040
+  "lastModified": 1770694333604
 }

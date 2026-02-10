@@ -591,3 +591,258 @@ export async function getTranslationFeedback(
     };
   }
 }
+
+// ============ Vocabulary Enrichment ============
+
+export interface EnrichVocabResult {
+  success: boolean;
+  data?: {
+    definition: string;
+    definitionZh?: string;
+    examples: Array<{ en: string; zh: string }>;
+  };
+  error?: string;
+}
+
+/**
+ * Enrich a vocabulary item with LLM-generated definition and examples
+ * @param text - The word or phrase to define
+ * @param type - 'word' | 'collocation' | 'pattern'
+ * @param contextSentence - The sentence where this vocabulary was found
+ */
+export async function enrichVocabulary(
+  text: string,
+  type: 'word' | 'collocation' | 'pattern',
+  contextSentence: string,
+  providerId?: string,
+  modelId?: string
+): Promise<EnrichVocabResult> {
+  if (!text.trim()) {
+    return { success: false, error: 'No text provided' };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.['enrich-vocab'];
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If no provider configured, return error
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const result = await executeTask<{
+      definition: string;
+      definitionZh?: string;
+      examples: Array<{ en: string; zh: string }>;
+    }>('enrich-vocab', providerId, modelId, { text, type, contextSentence });
+
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: {
+          definition: result.data.definition || '',
+          definitionZh: result.data.definitionZh,
+          examples: Array.isArray(result.data.examples) ? result.data.examples : [],
+        },
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to enrich vocabulary',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// ============ Pattern Suggestion ============
+
+export interface SuggestPatternResult {
+  success: boolean;
+  patterns?: Array<{
+    text: string;
+    template: string;
+    explanation: string;
+  }>;
+  error?: string;
+}
+
+/**
+ * Suggest grammatical patterns from a sentence using LLM
+ * @param sentenceEn - The English sentence to analyze
+ * @param sentenceZh - The Chinese translation for context
+ */
+export async function suggestPatterns(
+  sentenceEn: string,
+  sentenceZh: string,
+  providerId?: string,
+  modelId?: string
+): Promise<SuggestPatternResult> {
+  if (!sentenceEn.trim()) {
+    return { success: false, error: 'No sentence provided' };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.['suggest-pattern'];
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If no provider configured, return error
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const result = await executeTask<{
+      patterns: Array<{
+        text: string;
+        template: string;
+        explanation: string;
+      }>;
+    }>('suggest-pattern', providerId, modelId, { sentenceEn, sentenceZh });
+
+    if (result.success && result.data) {
+      return {
+        success: true,
+        patterns: Array.isArray(result.data.patterns) ? result.data.patterns : [],
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to suggest patterns',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+// ============ Semantic Sentence Analysis ============
+
+export interface AnalyzeSentenceResult {
+  success: boolean;
+  data?: {
+    tokens: Array<{
+      text: string;
+      index: number;
+      length: number;
+      lemma?: string;
+      isStopword: boolean;
+    }>;
+    chunks: Array<{
+      text: string;
+      indices: number[];
+      type: 'idiom' | 'collocation' | 'phrasal_verb';
+    }>;
+    patterns: Array<{
+      id: string;
+      template: string;
+      explanation: string;
+      examples: Array<{ en: string; zh: string }>;
+      anchors: Array<{ text: string; index: number }>;
+      matchedText: string;
+    }>;
+  };
+  error?: string;
+}
+
+/**
+ * Analyze a sentence to extract semantic units (tokens, chunks, patterns)
+ * @param sentenceEn - The English sentence to analyze
+ * @param sentenceZh - The Chinese translation for context
+ */
+export async function analyzeSentence(
+  sentenceEn: string,
+  sentenceZh: string,
+  providerId?: string,
+  modelId?: string
+): Promise<AnalyzeSentenceResult> {
+  if (!sentenceEn.trim()) {
+    return { success: false, error: 'No sentence provided' };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.['analyze-sentence'];
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  // If no provider configured, return error
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const result = await executeTask<{
+      tokens: Array<{
+        text: string;
+        index: number;
+        length: number;
+        lemma?: string;
+        isStopword: boolean;
+      }>;
+      chunks: Array<{
+        text: string;
+        indices: number[];
+        type: 'idiom' | 'collocation' | 'phrasal_verb';
+      }>;
+      patterns: Array<{
+        id: string;
+        template: string;
+        explanation: string;
+        examples: Array<{ en: string; zh: string }>;
+        anchors: Array<{ text: string; index: number }>;
+        matchedText: string;
+      }>;
+    }>('analyze-sentence', providerId, modelId, { sentence: sentenceEn, translation: sentenceZh });
+
+    if (result.success && result.data) {
+      return { success: true, data: result.data };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to analyze sentence',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}

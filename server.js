@@ -23,6 +23,8 @@ const sentencesFile = path.join(dataDir, 'sentences.json');
 const distSentencesFile = path.join(distDataDir, 'sentences.json');
 const tagsFile = path.join(dataDir, 'tags.json');
 const distTagsFile = path.join(distDataDir, 'tags.json');
+const vocabularyFile = path.join(dataDir, 'vocabulary.json');
+const distVocabularyFile = path.join(distDataDir, 'vocabulary.json');
 const llmConfigDir = path.join(__dirname, 'data');
 const llmConfigFile = path.join(llmConfigDir, 'llm-config.json');
 
@@ -400,6 +402,122 @@ app.patch('/api/tags/:id', (req, res) => {
     res.json({ success: true, data: store.userTags[index] });
   } catch (e) {
     console.error('Failed to update tag:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// === Vocabulary API Routes ===
+
+const DEFAULT_VOCABULARY_STORE = { version: 1, items: [], lastModified: Date.now() };
+
+function loadVocabularyStore() {
+  try {
+    if (fs.existsSync(vocabularyFile)) {
+      return JSON.parse(fs.readFileSync(vocabularyFile, 'utf-8'));
+    }
+  } catch (e) {
+    console.error('Failed to load vocabulary:', e);
+  }
+  return { ...DEFAULT_VOCABULARY_STORE };
+}
+
+function saveVocabularyStore(store) {
+  const content = JSON.stringify(store, null, 2);
+  fs.writeFileSync(vocabularyFile, content);
+  if (fs.existsSync(distDataDir)) {
+    fs.writeFileSync(distVocabularyFile, content);
+  }
+}
+
+// GET /api/vocabulary - Get all vocabulary items
+app.get('/api/vocabulary', (req, res) => {
+  try {
+    const store = loadVocabularyStore();
+    res.json({ success: true, data: store });
+  } catch (e) {
+    console.error('Failed to get vocabulary:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/vocabulary - Save full vocabulary store
+app.post('/api/vocabulary', (req, res) => {
+  try {
+    const store = req.body;
+    if (!store || !Array.isArray(store.items)) {
+      return res.status(400).json({ success: false, error: 'Invalid vocabulary store format' });
+    }
+    store.lastModified = Date.now();
+    saveVocabularyStore(store);
+    res.json({ success: true, count: store.items.length });
+  } catch (e) {
+    console.error('Failed to save vocabulary:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/vocabulary/:id - Get single vocabulary item
+app.get('/api/vocabulary/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const store = loadVocabularyStore();
+    const item = (store.items || []).find(v => v.id === id);
+
+    if (!item) {
+      return res.status(404).json({ success: false, error: 'Vocabulary item not found' });
+    }
+
+    res.json({ success: true, data: item });
+  } catch (e) {
+    console.error('Failed to get vocabulary item:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// PATCH /api/vocabulary/:id - Update single vocabulary item
+app.patch('/api/vocabulary/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const store = loadVocabularyStore();
+    const index = (store.items || []).findIndex(v => v.id === id);
+
+    if (index === -1) {
+      return res.status(404).json({ success: false, error: 'Vocabulary item not found' });
+    }
+
+    // Merge updates into existing item
+    store.items[index] = { ...store.items[index], ...updates, updatedAt: Date.now() };
+    store.lastModified = Date.now();
+    saveVocabularyStore(store);
+
+    res.json({ success: true, data: store.items[index] });
+  } catch (e) {
+    console.error('Failed to patch vocabulary item:', e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// DELETE /api/vocabulary/:id - Delete single vocabulary item
+app.delete('/api/vocabulary/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const store = loadVocabularyStore();
+    const initialLength = store.items?.length || 0;
+    store.items = (store.items || []).filter(v => v.id !== id);
+
+    if (store.items.length === initialLength) {
+      return res.status(404).json({ success: false, error: 'Vocabulary item not found' });
+    }
+
+    store.lastModified = Date.now();
+    saveVocabularyStore(store);
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error('Failed to delete vocabulary item:', e);
     res.status(500).json({ success: false, error: e.message });
   }
 });
