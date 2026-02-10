@@ -15,4 +15,5 @@ export const AVAILABLE_COMMANDS = [
   { id: 'playAudio', label: 'Play Audio', default: 'Alt+P' },
   { id: 'autoSave', label: 'Trigger Auto Save', default: 'Ctrl+S' },
   { id: 'toggleSidebar', label: 'Toggle Sidebar', default: '' },
+  { id: 'toggleVocabSidebar', label: 'Toggle Vocabulary Sidebar', default: 'Ctrl+Shift+V' },
 ];

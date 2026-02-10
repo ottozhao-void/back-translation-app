@@ -364,88 +364,91 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
 
           {/* Source Text */}
           <div className="mb-6 group/source" onMouseUp={handleMouseUp}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xs font-mono uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
-                {sourceLabel}
-              </span>
-              <button
-                onClick={() => playTextToSpeech(sourceText)}
-                className="p-1 hover:opacity-80 transition-opacity"
-                style={{ color: 'var(--text-secondary)' }}
-                title="Read Aloud"
-              >
-                <SpeakerIcon />
-              </button>
-
-              {/* Analysis status indicator */}
-              {analysisState.status === 'loading' && (
-                <span className="text-xs" style={{ color: 'var(--accent-blue, #60A5FA)' }}>
-                  Analyzing...
+            <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-mono uppercase tracking-wider" style={{ color: 'var(--text-secondary)' }}>
+                  {sourceLabel}
                 </span>
-              )}
-              {analysisState.status === 'error' && (
-                <span className="text-xs text-red-400" title={analysisState.error}>
-                  Analysis failed
-                </span>
-              )}
-            </div>
-
-            <div className="relative">
-              {/* Interactive or static text rendering */}
-              {isInteractiveMode && analysisState.data && isEnToZh ? (
-                <InteractiveSentenceRenderer
-                  sentence={sourceText}
-                  analysis={analysisState.data}
-                  onUnitClick={handleUnitClick}
-                  hoveredPatternId={hoveredPatternId}
-                />
-              ) : (
-                <p
-                  className="text-xl leading-relaxed font-serif-sc select-text cursor-text"
-                  style={{ color: 'var(--text-main)' }}
-                >
-                  {sourceText}
-                </p>
-              )}
-
-              {/* Edit button - top right */}
-              {onUpdateSentence && (
                 <button
-                  onClick={() => setEditingField(sourceField as 'en' | 'zh')}
-                  className="absolute top-0 right-0 p-2 rounded-lg opacity-0 group-hover/source:opacity-100 transition-opacity hover:bg-[var(--surface-hover)] cursor-pointer"
+                  onClick={() => playTextToSpeech(sourceText)}
+                  className="p-1 hover:opacity-80 transition-opacity"
                   style={{ color: 'var(--text-secondary)' }}
-                  title={`Edit ${sourceLabel} text`}
+                  title="Read Aloud"
                 >
-                  <PencilIcon />
+                  <SpeakerIcon />
                 </button>
-              )}
 
-              {/* Magic Analyze Button - Below edit icon, only for English in EN_TO_ZH mode */}
-              {isEnToZh && onUpdateSentence && (
-                <button
-                  onClick={handleMagicAnalyze}
-                  disabled={analysisState.status === 'loading'}
-                  className={`absolute top-8 right-0 p-2 rounded-lg transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer ${
-                    isInteractiveMode ? 'opacity-100' : 'opacity-0 group-hover/source:opacity-100'
-                  }`}
-                  style={{
-                    color: isInteractiveMode
-                      ? 'var(--accent-yellow, #FBBF24)'
-                      : analysisState.status === 'completed'
+                {/* Analysis status indicator */}
+                {analysisState.status === 'loading' && (
+                  <span className="text-xs" style={{ color: 'var(--accent-blue, #60A5FA)' }}>
+                    Analyzing...
+                  </span>
+                )}
+                {analysisState.status === 'error' && (
+                  <span className="text-xs text-red-400" title={analysisState.error}>
+                    Analysis failed
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                {/* Edit button - right side */}
+                {onUpdateSentence && (
+                  <button
+                    onClick={() => {
+                      setSelection(null);
+                      setEditingField(sourceField as 'en' | 'zh');
+                    }}
+                    className="p-1 hover:opacity-80 transition-opacity hover:bg-[var(--surface-hover)] rounded-lg cursor-pointer"
+                    style={{ color: 'var(--text-secondary)' }}
+                    title={`Edit ${sourceLabel} text`}
+                  >
+                    <PencilIcon />
+                  </button>
+                )}
+
+                {/* Magic Analyze Button - right side, only for English in EN_TO_ZH mode */}
+                {isEnToZh && onUpdateSentence && (
+                  <button
+                    onClick={handleMagicAnalyze}
+                    disabled={analysisState.status === 'loading'}
+                    className="p-1 rounded-lg transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+                    style={{
+                      color: isInteractiveMode
                         ? 'var(--accent-yellow, #FBBF24)'
-                        : 'var(--text-secondary)',
-                  }}
-                  title={
-                    isInteractiveMode ? 'Exit interactive mode' :
-                    analysisState.status === 'completed' ? 'Enter interactive mode - click words to add vocabulary' :
-                    analysisState.status === 'loading' ? 'Analyzing...' :
-                    'AI Analyze - Click to find vocabulary'
-                  }
-                >
-                  <MagicWandIcon />
-                </button>
-              )}
+                        : analysisState.status === 'completed'
+                          ? 'var(--accent-yellow, #FBBF24)'
+                          : 'var(--text-secondary)',
+                    }}
+                    title={
+                      isInteractiveMode ? 'Exit interactive mode' :
+                      analysisState.status === 'completed' ? 'Enter interactive mode - click words to add vocabulary' :
+                      analysisState.status === 'loading' ? 'Analyzing...' :
+                      'AI Analyze - Click to find vocabulary'
+                    }
+                  >
+                    <MagicWandIcon />
+                  </button>
+                )}
+              </div>
             </div>
+
+            {/* Interactive or static text rendering */}
+            {isInteractiveMode && analysisState.data && isEnToZh ? (
+              <InteractiveSentenceRenderer
+                sentence={sourceText}
+                analysis={analysisState.data}
+                onUnitClick={handleUnitClick}
+                hoveredPatternId={hoveredPatternId}
+              />
+            ) : (
+              <p
+                className="text-xl leading-relaxed font-serif-sc select-text cursor-text"
+                style={{ color: 'var(--text-main)' }}
+              >
+                {sourceText}
+              </p>
+            )}
 
             {/* Pattern Chips - Display below source text when in interactive mode */}
             {isInteractiveMode && analysisState.data?.patterns && isEnToZh && (
@@ -502,7 +505,10 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
                 </p>
                 {onUpdateSentence && (
                   <button
-                    onClick={() => setEditingField(referenceField as 'en' | 'zh')}
+                    onClick={() => {
+                      setSelection(null);
+                      setEditingField(referenceField as 'en' | 'zh');
+                    }}
                     className="absolute top-0 right-0 p-2 rounded-lg opacity-0 group-hover/reference:opacity-100 transition-opacity hover:bg-[var(--surface-hover)] cursor-pointer"
                     style={{ color: 'var(--text-secondary)' }}
                     title={`Edit ${referenceLabel} text`}

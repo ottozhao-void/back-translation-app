@@ -56,14 +56,18 @@ export const TextEditModal: React.FC<TextEditModalProps> = ({
     <div className="fixed inset-0 z-[100] flex items-center justify-center fade-in">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        className="absolute inset-0 backdrop-blur-sm"
+        style={{ backgroundColor: 'var(--modal-backdrop)' }}
         onClick={onCancel}
       />
 
       {/* Modal */}
       <div
-        className="relative glass-panel rounded-2xl p-6 max-w-lg w-full mx-4 shadow-2xl"
-        style={{ borderColor: 'var(--border-high-contrast)' }}
+        className="relative glass-panel rounded-2xl p-6 max-w-lg w-full mx-4"
+        style={{
+          borderColor: 'var(--border-high-contrast)',
+          boxShadow: 'var(--glow-strong)'
+        }}
       >
         {/* Close button */}
         <button

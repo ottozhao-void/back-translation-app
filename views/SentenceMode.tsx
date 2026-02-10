@@ -208,7 +208,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     setSidebarCollapsed(prev => !prev);
   }, []);
 
-  // Keyboard shortcut for sidebar toggle (configurable via Settings)
+  // Keyboard shortcuts (configurable via Settings)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't trigger if user is typing in an input
@@ -216,16 +216,18 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         return;
       }
 
+      // Sentence sidebar toggle
       const toggleSidebarCmd = AVAILABLE_COMMANDS.find(c => c.id === 'toggleSidebar');
-      const hotkeyString = appSettings.hotkeys?.toggleSidebar ?? toggleSidebarCmd?.default ?? '';
-
-      if (hotkeyString && matchesHotkey(e, hotkeyString)) {
+      const sidebarHotkey = appSettings.hotkeys?.toggleSidebar ?? toggleSidebarCmd?.default ?? '';
+      if (sidebarHotkey && matchesHotkey(e, sidebarHotkey)) {
         e.preventDefault();
         toggleSidebar();
       }
 
-      // Vocabulary sidebar toggle (Ctrl+Shift+V)
-      if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'V') {
+      // Vocabulary sidebar toggle
+      const toggleVocabCmd = AVAILABLE_COMMANDS.find(c => c.id === 'toggleVocabSidebar');
+      const vocabHotkey = appSettings.hotkeys?.toggleVocabSidebar ?? toggleVocabCmd?.default ?? '';
+      if (vocabHotkey && matchesHotkey(e, vocabHotkey)) {
         e.preventDefault();
         toggleVocabSidebar();
       }
