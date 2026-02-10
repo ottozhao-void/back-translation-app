@@ -3,7 +3,6 @@ import { SemanticUnit, VocabularyType } from '../../types';
 
 interface SemanticUnitPopoverProps {
   unit: SemanticUnit;
-  position: { x: number; y: number };
   onAddToVocabulary: (text: string, type: VocabularyType) => void;
   onClose: () => void;
 }
@@ -14,40 +13,26 @@ const COLOR_MAP = {
   pattern: '#FBBF24'
 };
 
+const TYPE_LABEL_MAP: Record<string, string> = {
+  word: 'Word',
+  collocation: 'Collocation',
+  pattern: 'Pattern',
+};
+
 export const SemanticUnitPopover: React.FC<SemanticUnitPopoverProps> = ({
   unit,
-  position,
   onAddToVocabulary,
   onClose,
 }) => {
-  const popoverRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-
-    const timeoutId = setTimeout(() => {
-      document.addEventListener('mousedown', handleClickOutside);
-      document.addEventListener('keydown', handleEscape);
-    }, 10);
-
-    return () => {
-      clearTimeout(timeoutId);
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleEscape);
-    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
   }, [onClose]);
-
-  const adjustedPosition = {
-    x: Math.max(10, Math.min(position.x, window.innerWidth - 250)),
-    y: Math.max(10, position.y - 70),
-  };
 
   const getVocabularyType = (): VocabularyType => {
     if (unit.type === 'pattern') return 'pattern';
@@ -60,45 +45,64 @@ export const SemanticUnitPopover: React.FC<SemanticUnitPopoverProps> = ({
 
   return (
     <div
-      ref={popoverRef}
-      className="fixed z-[100] glass-panel rounded-lg p-3 shadow-xl border animate-in fade-in zoom-in-95 duration-150"
+      ref={barRef}
+      className="overflow-hidden motion-safe-animation"
       style={{
-        left: adjustedPosition.x,
-        top: adjustedPosition.y,
-        transform: 'translateX(-50%)',
-        minWidth: '200px',
+        animation: 'expand-in 200ms ease-out forwards',
       }}
     >
-      <div className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
-        Add to vocabulary:
-      </div>
       <div
-        className="font-medium mb-3 truncate"
-        style={{ color: typeColor }}
+        className="flex items-center gap-3 mt-3 px-4 py-2.5 rounded-xl"
+        style={{
+          backgroundColor: `${typeColor}10`,
+          border: `1px solid ${typeColor}30`,
+        }}
       >
-        "{unit.text}"
-      </div>
-      <div className="flex items-center gap-2">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onAddToVocabulary(unit.text, typeLabel);
-          }}
-          className="flex-1 py-2 rounded-md text-sm font-medium transition-colors text-white"
-          style={{ backgroundColor: typeColor }}
-        >
-          Add as {typeLabel}
-        </button>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onClose();
-          }}
-          className="px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-[var(--surface-hover)]"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          Cancel
-        </button>
+        {/* Selected text with type badge */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span
+            className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded"
+            style={{
+              backgroundColor: `${typeColor}20`,
+              color: typeColor,
+            }}
+          >
+            {TYPE_LABEL_MAP[typeLabel]}
+          </span>
+          <span
+            className="font-medium truncate text-sm"
+            style={{ color: typeColor }}
+          >
+            {unit.text}
+          </span>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onAddToVocabulary(unit.text, typeLabel);
+            }}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-white hover:opacity-90"
+            style={{ backgroundColor: typeColor }}
+          >
+            + Add
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="p-1.5 rounded-lg transition-colors hover:bg-[var(--surface-hover)]"
+            style={{ color: 'var(--text-secondary)' }}
+            title="Dismiss"
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );

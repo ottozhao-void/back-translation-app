@@ -1961,7 +1961,180 @@
         "text": "你无法立即读出req.body, 只能先用一个桶接住，直到水龙头关闭掉。",
         "timestamp": 1770630116745
       },
-      "lastPracticed": 1770630116745
+      "lastPracticed": 1770630116745,
+      "analysis": {
+        "tokens": [
+          {
+            "text": "cannot",
+            "index": 4,
+            "length": 6,
+            "lemma": "cannot",
+            "isStopword": false
+          },
+          {
+            "text": "just",
+            "index": 11,
+            "length": 4,
+            "lemma": "just",
+            "isStopword": false
+          },
+          {
+            "text": "read",
+            "index": 16,
+            "length": 4,
+            "lemma": "read",
+            "isStopword": false
+          },
+          {
+            "text": "req.body",
+            "index": 21,
+            "length": 8,
+            "lemma": "req.body",
+            "isStopword": false
+          },
+          {
+            "text": "immediately",
+            "index": 30,
+            "length": 11,
+            "lemma": "immediately",
+            "isStopword": false
+          },
+          {
+            "text": "have",
+            "index": 47,
+            "length": 4,
+            "lemma": "have",
+            "isStopword": false
+          },
+          {
+            "text": "to",
+            "index": 52,
+            "length": 2,
+            "lemma": "to",
+            "isStopword": false
+          },
+          {
+            "text": "catch",
+            "index": 56,
+            "length": 5,
+            "lemma": "catch",
+            "isStopword": false
+          },
+          {
+            "text": "water",
+            "index": 67,
+            "length": 5,
+            "lemma": "water",
+            "isStopword": false
+          },
+          {
+            "text": "in",
+            "index": 73,
+            "length": 2,
+            "lemma": "in",
+            "isStopword": false
+          },
+          {
+            "text": "bucket",
+            "index": 78,
+            "length": 6,
+            "lemma": "bucket",
+            "isStopword": false
+          },
+          {
+            "text": "until",
+            "index": 85,
+            "length": 5,
+            "lemma": "until",
+            "isStopword": false
+          },
+          {
+            "text": "faucet",
+            "index": 95,
+            "length": 6,
+            "lemma": "faucet",
+            "isStopword": false
+          },
+          {
+            "text": "turns",
+            "index": 102,
+            "length": 5,
+            "lemma": "turn",
+            "isStopword": false
+          },
+          {
+            "text": "off",
+            "index": 108,
+            "length": 3,
+            "lemma": "off",
+            "isStopword": false
+          }
+        ],
+        "chunks": [
+          {
+            "text": "turns off",
+            "indices": [
+              102,
+              108
+            ],
+            "type": "phrasal_verb"
+          }
+        ],
+        "patterns": [
+          {
+            "id": "pattern-1",
+            "template": "have to ... until ...",
+            "explanation": "Expresses an obligation or necessity that must persist until a specific condition is met or an event occurs.",
+            "examples": [
+              {
+                "en": "You have to wait in line until your name is called.",
+                "zh": "你必须排队等候，直到喊到你的名字。"
+              },
+              {
+                "en": "We have to keep stirring the soup until it boils.",
+                "zh": "我们要一直搅拌汤，直到煮开为止。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "have to",
+                "index": 47
+              },
+              {
+                "text": "until",
+                "index": 85
+              }
+            ],
+            "matchedText": "have to \"catch\" the water in a bucket until"
+          },
+          {
+            "id": "pattern-2",
+            "template": "cannot just [verb]",
+            "explanation": "Used to emphasize that a simple or immediate action is not sufficient for the situation.",
+            "examples": [
+              {
+                "en": "You cannot just walk into the meeting without an invitation.",
+                "zh": "没有邀请，你不能就这样走进会议室。"
+              },
+              {
+                "en": "He cannot just quit his job without a backup plan.",
+                "zh": "没有后备计划，他不能就这样辞职。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "cannot",
+                "index": 4
+              },
+              {
+                "text": "just",
+                "index": 11
+              }
+            ],
+            "matchedText": "cannot just read"
+          }
+        ]
+      }
     },
     {
       "id": "sent_1770453705733_cy4c",
@@ -1978,5 +2151,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770694333604
+  "lastModified": 1770701009350
 }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { SentencePair, PracticeMode, TagInfo, VocabularyType, SentenceAnalysis, SemanticUnit } from '../../../types';
 import { SpeakerIcon, PencilIcon, MagicWandIcon } from '../../Icons';
 import { playTextToSpeech } from '../../../services/geminiService';
@@ -86,15 +86,30 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
 
   const [hoveredPatternId, setHoveredPatternId] = useState<string | null>(null);
 
-  const [selectedUnit, setSelectedUnit] = useState<{
-    unit: SemanticUnit;
-    position: { x: number; y: number };
-  } | null>(null);
+  const [selectedUnit, setSelectedUnit] = useState<SemanticUnit | null>(null);
+
+  // Interactive mode must be explicitly toggled by the user
+  const [isInteractiveMode, setIsInteractiveMode] = useState(false);
+
+  // Reset transient state when switching sentences
+  useEffect(() => {
+    setSelectedUnit(null);
+    setHoveredPatternId(null);
+    setSelection(null);
+    setIsReferenceRevealed(false);
+    setIsInteractiveMode(false);
+    // Restore persisted analysis or reset
+    if (sentence.analysis) {
+      setAnalysisState({ status: 'completed', data: sentence.analysis });
+    } else {
+      setAnalysisState({ status: 'none' });
+    }
+  }, [sentence.id]);
 
   // Handle text selection
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     // Only handle selection when not in interactive mode
-    if (analysisState.status === 'completed') return;
+    if (isInteractiveMode) return;
 
     const selectedText = window.getSelection()?.toString().trim();
     if (selectedText && selectedText.length > 0 && selectedText.length < 200) {
@@ -115,7 +130,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
       // Clear selection if clicking without selecting
       setSelection(null);
     }
-  }, [analysisState.status]);
+  }, [isInteractiveMode]);
 
   // Handle adding vocabulary
   const handleAddWord = useCallback(() => {
@@ -184,9 +199,24 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
 
   // Handler for magic analyze button
   const handleMagicAnalyze = useCallback(async () => {
-    // Check if already analyzed
+    // If already in interactive mode, toggle it off
+    if (isInteractiveMode) {
+      setIsInteractiveMode(false);
+      setSelectedUnit(null);
+      setHoveredPatternId(null);
+      return;
+    }
+
+    // If already analyzed, just toggle interactive mode on
+    if (analysisState.status === 'completed' && analysisState.data) {
+      setIsInteractiveMode(true);
+      return;
+    }
+
+    // Check if sentence has persisted analysis
     if (sentence.analysis) {
       setAnalysisState({ status: 'completed', data: sentence.analysis });
+      setIsInteractiveMode(true);
       return;
     }
 
@@ -201,6 +231,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
         patterns: result.data.patterns,
       };
       setAnalysisState({ status: 'completed', data: analysis });
+      setIsInteractiveMode(true);
       // Persist to sentence
       if (onUpdateSentence) {
         onUpdateSentence(sentence.id, { analysis });
@@ -211,29 +242,25 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
         error: result.error || 'Analysis failed'
       });
     }
-  }, [sentence, onUpdateSentence]);
+  }, [sentence, onUpdateSentence, isInteractiveMode, analysisState]);
 
   // Handler for semantic unit clicks
-  const handleUnitClick = useCallback((unit: SemanticUnit, position: { x: number; y: number }) => {
-    setSelectedUnit({ unit, position });
+  const handleUnitClick = useCallback((unit: SemanticUnit) => {
+    setSelectedUnit(unit);
   }, []);
 
   // Handler for pattern chip clicks
   const handlePatternClick = useCallback((pattern: SentenceAnalysis['patterns'][0]) => {
-    // Convert pattern to semantic unit
     setSelectedUnit({
-      unit: {
-        text: pattern.matchedText || pattern.template,
-        type: 'pattern',
-        startIndex: 0,
-        endIndex: pattern.matchedText?.length || pattern.template.length,
-        patternId: pattern.id,
-      },
-      position: { x: window.innerWidth / 2, y: 200 },
+      text: pattern.matchedText || pattern.template,
+      type: 'pattern',
+      startIndex: 0,
+      endIndex: pattern.matchedText?.length || pattern.template.length,
+      patternId: pattern.id,
     });
   }, []);
 
-  // Handler for adding from popover
+  // Handler for adding from inline action bar
   const handleAddFromPopover = useCallback((text: string, type: VocabularyType) => {
     if (onAddVocabulary) {
       onAddVocabulary(text, type);
@@ -365,7 +392,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
 
             <div className="relative">
               {/* Interactive or static text rendering */}
-              {analysisState.status === 'completed' && analysisState.data && isEnToZh ? (
+              {isInteractiveMode && analysisState.data && isEnToZh ? (
                 <InteractiveSentenceRenderer
                   sentence={sourceText}
                   analysis={analysisState.data}
@@ -398,12 +425,19 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
                 <button
                   onClick={handleMagicAnalyze}
                   disabled={analysisState.status === 'loading'}
-                  className="absolute top-8 right-0 p-2 rounded-lg opacity-0 group-hover/source:opacity-100 transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
+                  className={`absolute top-8 right-0 p-2 rounded-lg transition-all hover:scale-110 disabled:opacity-50 disabled:hover:scale-100 cursor-pointer ${
+                    isInteractiveMode ? 'opacity-100' : 'opacity-0 group-hover/source:opacity-100'
+                  }`}
                   style={{
-                    color: analysisState.status === 'completed' ? 'var(--accent-yellow, #FBBF24)' : 'var(--text-secondary)',
+                    color: isInteractiveMode
+                      ? 'var(--accent-yellow, #FBBF24)'
+                      : analysisState.status === 'completed'
+                        ? 'var(--accent-yellow, #FBBF24)'
+                        : 'var(--text-secondary)',
                   }}
                   title={
-                    analysisState.status === 'completed' ? 'Sentence analyzed - click words to add vocabulary' :
+                    isInteractiveMode ? 'Exit interactive mode' :
+                    analysisState.status === 'completed' ? 'Enter interactive mode - click words to add vocabulary' :
                     analysisState.status === 'loading' ? 'Analyzing...' :
                     'AI Analyze - Click to find vocabulary'
                   }
@@ -413,13 +447,22 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
               )}
             </div>
 
-            {/* Pattern Chips - Display below source text when analyzed */}
-            {analysisState.status === 'completed' && analysisState.data?.patterns && isEnToZh && (
+            {/* Pattern Chips - Display below source text when in interactive mode */}
+            {isInteractiveMode && analysisState.data?.patterns && isEnToZh && (
               <PatternChips
                 patterns={analysisState.data.patterns}
                 hoveredPatternId={hoveredPatternId}
                 onPatternHover={setHoveredPatternId}
                 onPatternClick={handlePatternClick}
+              />
+            )}
+
+            {/* Inline Action Bar - Replaces floating popover */}
+            {selectedUnit && (
+              <SemanticUnitPopover
+                unit={selectedUnit}
+                onAddToVocabulary={handleAddFromPopover}
+                onClose={() => setSelectedUnit(null)}
               />
             )}
           </div>
@@ -548,15 +591,6 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
         />
       )}
 
-      {/* Semantic Unit Popover */}
-      {selectedUnit && (
-        <SemanticUnitPopover
-          unit={selectedUnit.unit}
-          position={selectedUnit.position}
-          onAddToVocabulary={handleAddFromPopover}
-          onClose={() => setSelectedUnit(null)}
-        />
-      )}
     </div>
   );
 };

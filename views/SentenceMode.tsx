@@ -157,6 +157,9 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // View mode: 'detail' shows SentenceDetailView, 'practice' shows SentencePracticeArea
   const [viewMode, setViewMode] = useState<'detail' | 'practice'>('detail');
 
+  // Key to force-reset detail view (carousel back to card 0) on every sentence click
+  const [detailResetKey, setDetailResetKey] = useState(0);
+
   // Context filter for sidebar (paragraph/article filtering)
   const [contextFilter, setContextFilter] = useState<ContextFilter | null>(null);
 
@@ -275,7 +278,9 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // Handle sentence selection - reset to detail view
   const handleSelectSentence = (id: string) => {
     setSelectedId(id);
+    setSelectedVocabId(null); // Clear vocab selection so SentenceDetailView renders
     setViewMode('detail'); // Always show detail view when selecting a new sentence
+    setDetailResetKey(k => k + 1); // Force carousel reset to first card
   };
 
   // Handle starting practice from detail view
@@ -512,6 +517,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           {/* Content */}
           {viewMode === 'detail' ? (
             <SentenceDetailView
+              key={detailResetKey}
               sentence={currentSentence}
               practiceMode={practiceMode}
               allSentences={sentences}

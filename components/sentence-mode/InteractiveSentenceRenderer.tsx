@@ -4,7 +4,7 @@ import { SentenceAnalysis, SemanticUnit } from '../../types';
 interface InteractiveSentenceRendererProps {
   sentence: string;
   analysis: SentenceAnalysis;
-  onUnitClick: (unit: SemanticUnit, position: { x: number; y: number }) => void;
+  onUnitClick: (unit: SemanticUnit) => void;
   hoveredPatternId: string | null;
 }
 
@@ -99,9 +99,8 @@ export const InteractiveSentenceRenderer: React.FC<InteractiveSentenceRendererPr
       parts.push(
         <span
           key={`unit-${i}`}
-          onClick={(e) => {
-            const rect = (e.target as HTMLElement).getBoundingClientRect();
-            onUnitClick(unit, { x: rect.left + rect.width / 2, y: rect.top });
+          onClick={() => {
+            onUnitClick(unit);
           }}
           className="cursor-pointer transition-all duration-150 hover:opacity-80 rounded px-0.5"
           style={{
