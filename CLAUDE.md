@@ -204,11 +204,33 @@ The app includes a generic LLM platform for AI-powered features like intelligent
 - `segment-align` - Semantically align bilingual text
 - `translate` - Translate text (reserved)
 - `score` - Score translation quality (reserved)
+- `greeting` - Generate personalized greetings
+- `enrich-vocab` - Generate definition + examples for vocabulary
+- `suggest-pattern` - Extract grammatical patterns from sentences
+- `analyze-sentence` - Semantic analysis for vocabulary collection
+- `custom` - Custom task with user-provided prompt
 
 **Configuration:**
 - Provider configs stored in `data/llm-config.json` (gitignored)
 - Settings UI: Settings → AI Models tab
 - Supports any OpenAI-compatible API (OpenAI, Gemini, Ollama, etc.)
+
+### LLM Settings Architecture (Task Configuration)
+
+The AI Models settings use a metadata-driven architecture for task configuration:
+
+- **Task metadata**: `components/settings/llm/taskMetadata.ts` - Single source of truth for task definitions, categories, and labels
+- **Default params**: `components/settings/llm/defaultTaskParams.ts` - Recommended parameters per task type (auto-applied on first config)
+- **ParameterEditor**: `components/settings/llm/ParameterEditor.tsx` - Reusable component for model parameters (used in both default and task-specific contexts)
+- **TaskConfigurationView**: `components/settings/llm/TaskConfigurationView.tsx` - Main composer with tabs, grid, and modal for task configuration
+- **Import paths**: Files in `components/settings/llm/` use `../../../types.ts` (3 levels up to root)
+
+**Task Categories:**
+- Segmentation: `segment`, `segment-align`
+- Translation: `translate`, `score`
+- Learning: `greeting`, `enrich-vocab`, `suggest-pattern`
+- Analysis: `analyze-sentence`
+- General: `custom`
 
 ## Key Implementation Details
 
