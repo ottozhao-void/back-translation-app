@@ -6,7 +6,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'http';
 import type { LLMTaskRequest, LLMProviderConfig, LLMSettings } from '../../types';
-import { loadSettings, saveSettings, saveProviderConfig, deleteProvider } from './providers';
+import { loadSettings, saveSettings, saveProviderConfig, deleteProvider, getProviderConfig } from './providers';
 import { executeLLMTask, fetchModels } from './executor';
 
 /**
@@ -108,6 +108,8 @@ export async function handleGetConfig(_req: IncomingMessage, res: ServerResponse
 
 /**
  * Handle POST /api/llm/config - Save LLM configuration
+ *
+ * IMPORTANT: Preserves existing API keys when they are masked (start with ***)
  */
 export async function handleSaveConfig(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
@@ -118,7 +120,28 @@ export async function handleSaveConfig(req: IncomingMessage, res: ServerResponse
       return;
     }
 
-    const success = saveSettings(body.config);
+    // Load existing settings to preserve masked API keys
+    const existingSettings = loadSettings();
+    const existingProvidersMap = new Map(
+      existingSettings.providers.map(p => [p.id, p])
+    );
+
+    // Restore API keys that were masked (start with ***)
+    const providersWithPreservedKeys = body.config.providers.map(provider => {
+      const existing = existingProvidersMap.get(provider.id);
+      // If the incoming API key is masked but we have an existing one, preserve the existing
+      if (provider.apiKey?.startsWith('***') && existing?.apiKey) {
+        return { ...provider, apiKey: existing.apiKey };
+      }
+      return provider;
+    });
+
+    const configToSave: LLMSettings = {
+      ...body.config,
+      providers: providersWithPreservedKeys,
+    };
+
+    const success = saveSettings(configToSave);
     sendJson(res, success ? 200 : 500, {
       success,
       error: success ? undefined : 'Failed to save configuration',
@@ -134,6 +157,8 @@ export async function handleSaveConfig(req: IncomingMessage, res: ServerResponse
 
 /**
  * Handle POST /api/llm/provider - Save a provider configuration
+ *
+ * IMPORTANT: Preserves existing API key when it is masked (starts with ***)
  */
 export async function handleSaveProvider(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
@@ -144,7 +169,17 @@ export async function handleSaveProvider(req: IncomingMessage, res: ServerRespon
       return;
     }
 
-    const success = saveProviderConfig(body.provider);
+    let providerToSave = body.provider;
+
+    // If the API key is masked, preserve the existing one
+    if (providerToSave.apiKey?.startsWith('***')) {
+      const existingProvider = getProviderConfig(providerToSave.id);
+      if (existingProvider?.apiKey) {
+        providerToSave = { ...providerToSave, apiKey: existingProvider.apiKey };
+      }
+    }
+
+    const success = saveProviderConfig(providerToSave);
     sendJson(res, success ? 200 : 500, {
       success,
       error: success ? undefined : 'Failed to save provider',

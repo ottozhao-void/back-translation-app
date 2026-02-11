@@ -17,12 +17,17 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
 }) => {
   const isEditing = !!provider;
 
+  // Check if the API key is masked (from server response)
+  const apiKeyIsMasked = provider?.apiKey?.startsWith('***') || false;
+
   const [name, setName] = useState(provider?.name || '');
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl || '');
   const [providerType, setProviderType] = useState<LLMProviderType>(
     provider?.providerType || 'openai'
   );
-  const [apiKey, setApiKey] = useState(provider?.apiKey || '');
+  // For editing, if API key is masked, start with empty string
+  // The server will preserve the existing key if we send back a masked value
+  const [apiKey, setApiKey] = useState(apiKeyIsMasked ? '' : (provider?.apiKey || ''));
   const [showApiKey, setShowApiKey] = useState(false);
   const [models, setModels] = useState<string[]>(provider?.models || []);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(
@@ -88,12 +93,30 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
     setIsSaving(true);
     setError(null);
 
+    // Determine the API key to save:
+    // - If adding new provider, use the entered key
+    // - If editing and user entered a new key, use it
+    // - If editing and user didn't enter a key (field is empty), preserve the masked key
+    //   so the server knows to keep the existing one
+    let apiKeyToSave: string;
+    if (!isEditing) {
+      // New provider - always use the entered key
+      apiKeyToSave = apiKey.trim();
+    } else if (apiKey.trim()) {
+      // Editing with a new key entered - use the new key
+      apiKeyToSave = apiKey.trim();
+    } else {
+      // Editing without changing the key - send back the masked value
+      // The server will preserve the existing complete key
+      apiKeyToSave = provider?.apiKey || '';
+    }
+
     const newProvider: LLMProviderConfig = {
       id: provider?.id || `provider-${Date.now()}`,
       name: name.trim(),
       providerType,
       baseUrl: baseUrl.trim(),
-      apiKey: apiKey.trim(),
+      apiKey: apiKeyToSave,
       isEnabled: true,
       models: Array.from(selectedModels),
       lastFetched: models.length > 0 ? Date.now() : undefined,
@@ -218,13 +241,18 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
             <div className="space-y-2">
               <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
                 API Key
+                {apiKeyIsMasked && (
+                  <span className="ml-2 text-xs font-normal" style={{ color: 'var(--text-secondary)' }}>
+                    (leave empty to keep existing key)
+                  </span>
+                )}
               </label>
               <div className="relative">
                 <input
                   type={showApiKey ? 'text' : 'password'}
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
+                  placeholder={apiKeyIsMasked ? 'Enter new API key or leave empty...' : 'sk-...'}
                   className="w-full px-4 py-2.5 pr-12 rounded-lg text-sm font-mono transition-all input-glow"
                   style={{
                     backgroundColor: 'var(--surface-hover)',
@@ -241,6 +269,11 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
                   <EyeIcon />
                 </button>
               </div>
+              {apiKeyIsMasked && (
+                <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                  The existing API key is hidden for security. Leave this field empty to keep it, or enter a new key to replace it.
+                </p>
+              )}
             </div>
 
             {/* Fetch Models Button */}

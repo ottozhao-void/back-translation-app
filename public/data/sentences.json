@@ -1689,7 +1689,7 @@
             "text": "R&D",
             "index": 7,
             "length": 3,
-            "lemma": "R&D",
+            "lemma": "r&d",
             "isStopword": false
           },
           {
@@ -1703,7 +1703,7 @@
             "text": "China",
             "index": 18,
             "length": 5,
-            "lemma": "China",
+            "lemma": "china",
             "isStopword": false
           },
           {
@@ -1712,6 +1712,13 @@
             "length": 5,
             "lemma": "take",
             "isStopword": false
+          },
+          {
+            "text": "the",
+            "index": 30,
+            "length": 3,
+            "lemma": "the",
+            "isStopword": true
           },
           {
             "text": "Top",
@@ -1730,20 +1737,12 @@
         ],
         "chunks": [
           {
-            "text": "take the top spot",
+            "text": "Takes the Top Spot",
             "indices": [
-              5,
-              6,
-              7,
-              8
-            ],
-            "type": "idiom"
-          },
-          {
-            "text": "top spot",
-            "indices": [
-              7,
-              8
+              24,
+              30,
+              34,
+              38
             ],
             "type": "collocation"
           }
@@ -1751,30 +1750,26 @@
         "patterns": [
           {
             "id": "pattern-1",
-            "template": "take the top spot",
-            "explanation": "Used to describe achieving the first place or most prominent position in a ranking or competition.",
+            "template": "... takes the ... spot",
+            "explanation": "Used to describe a situation where a person, team, or entity achieves the number one position in a ranking, competition, or list.",
             "examples": [
               {
-                "en": "The young athlete took the top spot in the marathon.",
-                "zh": "这位年轻的运动员在马拉松比赛中夺得冠军。"
+                "en": "She took the top spot in the national spelling bee.",
+                "zh": "她在全国拼字比赛中获得了第一名。"
               },
               {
-                "en": "Electric vehicles are expected to take the top spot in the market soon.",
-                "zh": "预计电动汽车很快将占据市场的主导地位。"
+                "en": "Our team took the lead spot in the sales charts this month.",
+                "zh": "我们团队在这个月的销售榜上占据了榜首位置。"
+              },
+              {
+                "en": "The underdog surprisingly took the first spot in the championship.",
+                "zh": "这名黑马出人意料地在锦标赛中夺得了第一。"
               }
             ],
             "anchors": [
               {
                 "text": "Takes",
                 "index": 24
-              },
-              {
-                "text": "the",
-                "index": 30
-              },
-              {
-                "text": "Top",
-                "index": 34
               },
               {
                 "text": "Spot",
@@ -1812,6 +1807,13 @@
             "isStopword": false
           },
           {
+            "text": "the",
+            "index": 4,
+            "length": 3,
+            "lemma": "the",
+            "isStopword": true
+          },
+          {
             "text": "first",
             "index": 8,
             "length": 5,
@@ -1843,7 +1845,7 @@
             "text": "China",
             "index": 31,
             "length": 5,
-            "lemma": "China",
+            "lemma": "china",
             "isStopword": false
           },
           {
@@ -1861,17 +1863,24 @@
             "isStopword": false
           },
           {
+            "text": "the",
+            "index": 51,
+            "length": 3,
+            "lemma": "the",
+            "isStopword": true
+          },
+          {
             "text": "United",
             "index": 55,
             "length": 6,
-            "lemma": "United",
+            "lemma": "united",
             "isStopword": false
           },
           {
             "text": "States",
             "index": 62,
             "length": 6,
-            "lemma": "States",
+            "lemma": "state",
             "isStopword": false
           },
           {
@@ -1889,17 +1898,24 @@
             "isStopword": false
           },
           {
+            "text": "the",
+            "index": 79,
+            "length": 3,
+            "lemma": "the",
+            "isStopword": true
+          },
+          {
             "text": "world’s",
             "index": 83,
             "length": 7,
-            "lemma": "world's",
+            "lemma": "world",
             "isStopword": false
           },
           {
             "text": "leading",
             "index": 91,
             "length": 7,
-            "lemma": "leading",
+            "lemma": "lead",
             "isStopword": false
           },
           {
@@ -1940,29 +1956,20 @@
         ],
         "chunks": [
           {
-            "text": "for the first time",
+            "text": "For the first time",
             "indices": [
               0,
-              4,
-              8,
-              14
+              1,
+              2,
+              3
             ],
             "type": "collocation"
           },
           {
-            "text": "in history",
+            "text": "leading spender",
             "indices": [
-              19,
-              22
-            ],
-            "type": "collocation"
-          },
-          {
-            "text": "research and development",
-            "indices": [
-              110,
-              119,
-              123
+              16,
+              17
             ],
             "type": "collocation"
           }
@@ -1970,50 +1977,16 @@
         "patterns": [
           {
             "id": "pattern-1",
-            "template": "For the first time in history, [Subject] has [Verb-ed]...",
-            "explanation": "A formal opening structure used to announce unprecedented events or historical milestones. 'For the first time in history' serves as an introductory adverbial phrase.",
+            "template": "surpass ... to become ...",
+            "explanation": "To exceed a competitor or previous record and consequently achieve a new status or rank.",
             "examples": [
               {
-                "en": "For the first time in history, humans have landed on Mars.",
-                "zh": "人类历史上首次登陆火星。"
+                "en": "He surpassed his teammate to become the top scorer.",
+                "zh": "他超越了队友，成为得分王。"
               },
               {
-                "en": "For the first time in history, a woman has been elected as president.",
-                "zh": "历史上首次有女性当选总统。"
-              }
-            ],
-            "anchors": [
-              {
-                "text": "For",
-                "index": 0
-              },
-              {
-                "text": "first",
-                "index": 8
-              },
-              {
-                "text": "time",
-                "index": 14
-              },
-              {
-                "text": "history",
-                "index": 22
-              }
-            ],
-            "matchedText": "For the first time in history"
-          },
-          {
-            "id": "pattern-2",
-            "template": "[Subject] has surpassed [Object] to become [Result]",
-            "explanation": "A structure describing one entity overtaking another to achieve a new status. 'To become' introduces the result or new position after the action of surpassing.",
-            "examples": [
-              {
-                "en": "Apple has surpassed Samsung to become the largest smartphone maker.",
-                "zh": "苹果超越三星成为最大的智能手机制造商。"
-              },
-              {
-                "en": "She has surpassed all expectations to become a world-class athlete.",
-                "zh": "她超越了所有人的期望，成为世界级运动员。"
+                "en": "Netflix surpassed traditional cable to become the dominant video platform.",
+                "zh": "网飞超越了传统有线电视，成为主流视频平台。"
               }
             ],
             "anchors": [
@@ -2030,33 +2003,41 @@
                 "index": 72
               }
             ],
-            "matchedText": "surpassed ... to become"
+            "matchedText": "surpassed the United States to become"
           },
           {
-            "id": "pattern-3",
-            "template": "spender on [Topic]",
-            "explanation": "A business/economic pattern describing who spends money on a particular area. 'Spender on' connects the person/entity to what they invest in.",
+            "id": "pattern-2",
+            "template": "For the first time in [period]",
+            "explanation": "Indicates that an event is occurring for the very first time within a specified duration or context.",
             "examples": [
               {
-                "en": "The US is the largest spender on military defense.",
-                "zh": "美国是最大的军事国防支出国。"
+                "en": "For the first time in a decade, the company reported a loss.",
+                "zh": "十年来，该公司首次报告亏损。"
               },
               {
-                "en": "Millennials are the biggest spenders on sustainable products.",
-                "zh": "千禧一代是可持续产品的最大消费群体。"
+                "en": "For the first time in human history, we can communicate instantly across the globe.",
+                "zh": "在人类历史上，我们首次能够在全球范围内进行即时交流。"
               }
             ],
             "anchors": [
               {
-                "text": "spender",
-                "index": 99
+                "text": "For",
+                "index": 0
               },
               {
-                "text": "on",
-                "index": 107
+                "text": "first",
+                "index": 8
+              },
+              {
+                "text": "time",
+                "index": 14
+              },
+              {
+                "text": "in",
+                "index": 19
               }
             ],
-            "matchedText": "spender on"
+            "matchedText": "For the first time in history"
           }
         ]
       }
@@ -2416,5 +2397,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770770033635
+  "lastModified": 1770772802474
 }

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { SentencePair, PracticeMode, TagInfo, VocabularyType, SentenceAnalysis, SemanticUnit } from '../../../types';
-import { SpeakerIcon, PencilIcon, MagicWandIcon } from '../../Icons';
+import { SpeakerIcon, PencilIcon, MagicWandIcon, TrashIcon, RefreshIcon } from '../../Icons';
 import { playTextToSpeech } from '../../../services/geminiService';
 import { TextEditModal } from '../TextEditModal';
 import { TagChip } from '../TagChip';
@@ -244,6 +244,47 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
     }
   }, [sentence, onUpdateSentence, isInteractiveMode, analysisState]);
 
+  // Handler for clearing analysis cache
+  const handleClearAnalysis = useCallback(() => {
+    // Remove analysis from sentence (persist)
+    if (onUpdateSentence) {
+      onUpdateSentence(sentence.id, { analysis: undefined });
+    }
+
+    // Reset local state
+    setAnalysisState({ status: 'none' });
+    setIsInteractiveMode(false);
+    setSelectedUnit(null);
+    setHoveredPatternId(null);
+  }, [sentence.id, onUpdateSentence]);
+
+  // Handler for regenerating analysis
+  const handleRegenerateAnalysis = useCallback(async () => {
+    setAnalysisState({ status: 'loading' });
+
+    const result = await analyzeSentence(sentence.en, sentence.zh);
+
+    if (result.success && result.data) {
+      const analysis: SentenceAnalysis = {
+        tokens: result.data.tokens,
+        chunks: result.data.chunks,
+        patterns: result.data.patterns,
+      };
+      setAnalysisState({ status: 'completed', data: analysis });
+      setIsInteractiveMode(true);
+
+      // Persist to sentence
+      if (onUpdateSentence) {
+        onUpdateSentence(sentence.id, { analysis });
+      }
+    } else {
+      setAnalysisState({
+        status: 'error',
+        error: result.error || 'Analysis failed'
+      });
+    }
+  }, [sentence.en, sentence.zh, sentence.id, onUpdateSentence]);
+
   // Handler for semantic unit clicks
   const handleUnitClick = useCallback((unit: SemanticUnit) => {
     setSelectedUnit(unit);
@@ -392,8 +433,8 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
               </div>
 
               <div className="flex items-center gap-2">
-                {/* Edit button - right side */}
-                {onUpdateSentence && (
+                {/* Normal mode: Show Edit button */}
+                {!isInteractiveMode && onUpdateSentence && (
                   <button
                     onClick={() => {
                       setSelection(null);
@@ -407,7 +448,32 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
                   </button>
                 )}
 
-                {/* Magic Analyze Button - right side, only for English in EN_TO_ZH mode */}
+                {/* Interactive mode: Show Clear cache and Regenerate buttons */}
+                {isInteractiveMode && onUpdateSentence && (
+                  <>
+                    <button
+                      onClick={handleClearAnalysis}
+                      disabled={analysisState.status === 'loading'}
+                      className="p-1 hover:opacity-80 transition-opacity hover:bg-[var(--surface-hover)] rounded-lg disabled:opacity-50 cursor-pointer"
+                      style={{ color: 'var(--text-secondary)' }}
+                      title="Clear analysis cache"
+                    >
+                      <TrashIcon />
+                    </button>
+
+                    <button
+                      onClick={handleRegenerateAnalysis}
+                      disabled={analysisState.status === 'loading'}
+                      className="p-1 hover:opacity-80 transition-opacity hover:bg-[var(--surface-hover)] rounded-lg disabled:opacity-50 cursor-pointer"
+                      style={{ color: 'var(--text-secondary)' }}
+                      title="Regenerate analysis"
+                    >
+                      <RefreshIcon />
+                    </button>
+                  </>
+                )}
+
+                {/* Magic Analyze button - always shown when applicable */}
                 {isEnToZh && onUpdateSentence && (
                   <button
                     onClick={handleMagicAnalyze}
