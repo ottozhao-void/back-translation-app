@@ -6,10 +6,13 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 import type { LLMProviderConfig, LLMSettings, LLMModelParams } from '../../types';
 
-// Configuration file path
-const DATA_DIR = path.join(process.cwd(), 'data');
+// Configuration file path - use import.meta.url to get correct project root in all environments
+const __filename = fileURLToPath(import.meta.url);
+const PROJECT_ROOT = path.dirname(path.dirname(path.dirname(__filename)));
+const DATA_DIR = path.join(PROJECT_ROOT, 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'llm-config.json');
 
 // Default model parameters
@@ -45,10 +48,25 @@ export function loadSettings(): LLMSettings {
     if (fs.existsSync(CONFIG_FILE)) {
       const content = fs.readFileSync(CONFIG_FILE, 'utf-8');
       const parsed = JSON.parse(content) as LLMSettings;
+
+      // Migrate old provider configs to include providerType
+      const migratedProviders = (parsed.providers || []).map(provider => {
+        if (!provider.providerType) {
+          // Infer provider type from base URL
+          if (provider.baseUrl.includes('anthropic.com')) {
+            return { ...provider, providerType: 'anthropic' as const };
+          }
+          // Default to OpenAI format for all others
+          return { ...provider, providerType: 'openai' as const };
+        }
+        return provider;
+      });
+
       // Merge with defaults to ensure all fields exist
       return {
         ...DEFAULT_SETTINGS,
         ...parsed,
+        providers: migratedProviders,
         defaultParams: {
           ...DEFAULT_MODEL_PARAMS,
           ...parsed.defaultParams,

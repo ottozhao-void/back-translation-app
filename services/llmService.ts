@@ -23,13 +23,14 @@ export type { LLMSettings, LLMProviderConfig, LLMTaskResponse };
  */
 export async function fetchModels(
   baseUrl: string,
-  apiKey: string
+  apiKey: string,
+  providerType?: 'openai' | 'anthropic'
 ): Promise<{ success: boolean; models?: string[]; error?: string }> {
   try {
     const response = await fetch('/api/llm/models', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ baseUrl, apiKey }),
+      body: JSON.stringify({ baseUrl, apiKey, providerType }),
     });
     return await response.json();
   } catch (error) {

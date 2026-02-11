@@ -63,7 +63,7 @@ export const GlobalSettingsTab: React.FC<GlobalSettingsTabProps> = ({
             style={{ color: 'var(--text-secondary)' }}
           >
             <p className="text-sm mb-2">No providers configured</p>
-            <p className="text-xs">Add an OpenAI-compatible provider to enable AI features</p>
+            <p className="text-xs">Add OpenAI or Anthropic to enable AI features</p>
           </div>
         ) : (
           <div className="space-y-2">

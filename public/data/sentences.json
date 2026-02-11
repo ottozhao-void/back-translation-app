@@ -1670,11 +1670,11 @@
       "createdAt": 1770384510650,
       "articleId": "article_1770384510650",
       "order": 0,
-      "lastPracticed": 1770428715865,
+      "lastPracticed": 1770765794012,
       "userTranslationZh": {
-        "type": "draft",
-        "text": "qqqqq",
-        "timestamp": 1770428715865
+        "type": "diff",
+        "text": "科研和发展全球性变化：中国夺得首位",
+        "timestamp": 1770765794012
       },
       "analysis": {
         "tokens": [
@@ -1784,6 +1784,13 @@
             "matchedText": "Takes the Top Spot"
           }
         ]
+      },
+      "practiceStats": {
+        "attempts": 1,
+        "totalTimeMs": 222431,
+        "lastAttemptMs": 222431,
+        "lastPracticedAt": 1770765794012,
+        "bestTimeMs": 222431
       }
     },
     {
@@ -1794,7 +1801,265 @@
       "sourceIndex": 1,
       "createdAt": 1770384510650,
       "articleId": "article_1770384510650",
-      "order": 1
+      "order": 1,
+      "analysis": {
+        "tokens": [
+          {
+            "text": "For",
+            "index": 0,
+            "length": 3,
+            "lemma": "for",
+            "isStopword": false
+          },
+          {
+            "text": "first",
+            "index": 8,
+            "length": 5,
+            "lemma": "first",
+            "isStopword": false
+          },
+          {
+            "text": "time",
+            "index": 14,
+            "length": 4,
+            "lemma": "time",
+            "isStopword": false
+          },
+          {
+            "text": "in",
+            "index": 19,
+            "length": 2,
+            "lemma": "in",
+            "isStopword": false
+          },
+          {
+            "text": "history",
+            "index": 22,
+            "length": 7,
+            "lemma": "history",
+            "isStopword": false
+          },
+          {
+            "text": "China",
+            "index": 31,
+            "length": 5,
+            "lemma": "China",
+            "isStopword": false
+          },
+          {
+            "text": "has",
+            "index": 37,
+            "length": 3,
+            "lemma": "have",
+            "isStopword": false
+          },
+          {
+            "text": "surpassed",
+            "index": 41,
+            "length": 9,
+            "lemma": "surpass",
+            "isStopword": false
+          },
+          {
+            "text": "United",
+            "index": 55,
+            "length": 6,
+            "lemma": "United",
+            "isStopword": false
+          },
+          {
+            "text": "States",
+            "index": 62,
+            "length": 6,
+            "lemma": "States",
+            "isStopword": false
+          },
+          {
+            "text": "to",
+            "index": 69,
+            "length": 2,
+            "lemma": "to",
+            "isStopword": false
+          },
+          {
+            "text": "become",
+            "index": 72,
+            "length": 6,
+            "lemma": "become",
+            "isStopword": false
+          },
+          {
+            "text": "world’s",
+            "index": 83,
+            "length": 7,
+            "lemma": "world's",
+            "isStopword": false
+          },
+          {
+            "text": "leading",
+            "index": 91,
+            "length": 7,
+            "lemma": "leading",
+            "isStopword": false
+          },
+          {
+            "text": "spender",
+            "index": 99,
+            "length": 7,
+            "lemma": "spender",
+            "isStopword": false
+          },
+          {
+            "text": "on",
+            "index": 107,
+            "length": 2,
+            "lemma": "on",
+            "isStopword": false
+          },
+          {
+            "text": "research",
+            "index": 110,
+            "length": 8,
+            "lemma": "research",
+            "isStopword": false
+          },
+          {
+            "text": "and",
+            "index": 119,
+            "length": 3,
+            "lemma": "and",
+            "isStopword": false
+          },
+          {
+            "text": "development",
+            "index": 123,
+            "length": 11,
+            "lemma": "development",
+            "isStopword": false
+          }
+        ],
+        "chunks": [
+          {
+            "text": "for the first time",
+            "indices": [
+              0,
+              4,
+              8,
+              14
+            ],
+            "type": "collocation"
+          },
+          {
+            "text": "in history",
+            "indices": [
+              19,
+              22
+            ],
+            "type": "collocation"
+          },
+          {
+            "text": "research and development",
+            "indices": [
+              110,
+              119,
+              123
+            ],
+            "type": "collocation"
+          }
+        ],
+        "patterns": [
+          {
+            "id": "pattern-1",
+            "template": "For the first time in history, [Subject] has [Verb-ed]...",
+            "explanation": "A formal opening structure used to announce unprecedented events or historical milestones. 'For the first time in history' serves as an introductory adverbial phrase.",
+            "examples": [
+              {
+                "en": "For the first time in history, humans have landed on Mars.",
+                "zh": "人类历史上首次登陆火星。"
+              },
+              {
+                "en": "For the first time in history, a woman has been elected as president.",
+                "zh": "历史上首次有女性当选总统。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "For",
+                "index": 0
+              },
+              {
+                "text": "first",
+                "index": 8
+              },
+              {
+                "text": "time",
+                "index": 14
+              },
+              {
+                "text": "history",
+                "index": 22
+              }
+            ],
+            "matchedText": "For the first time in history"
+          },
+          {
+            "id": "pattern-2",
+            "template": "[Subject] has surpassed [Object] to become [Result]",
+            "explanation": "A structure describing one entity overtaking another to achieve a new status. 'To become' introduces the result or new position after the action of surpassing.",
+            "examples": [
+              {
+                "en": "Apple has surpassed Samsung to become the largest smartphone maker.",
+                "zh": "苹果超越三星成为最大的智能手机制造商。"
+              },
+              {
+                "en": "She has surpassed all expectations to become a world-class athlete.",
+                "zh": "她超越了所有人的期望，成为世界级运动员。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "surpassed",
+                "index": 41
+              },
+              {
+                "text": "to",
+                "index": 69
+              },
+              {
+                "text": "become",
+                "index": 72
+              }
+            ],
+            "matchedText": "surpassed ... to become"
+          },
+          {
+            "id": "pattern-3",
+            "template": "spender on [Topic]",
+            "explanation": "A business/economic pattern describing who spends money on a particular area. 'Spender on' connects the person/entity to what they invest in.",
+            "examples": [
+              {
+                "en": "The US is the largest spender on military defense.",
+                "zh": "美国是最大的军事国防支出国。"
+              },
+              {
+                "en": "Millennials are the biggest spenders on sustainable products.",
+                "zh": "千禧一代是可持续产品的最大消费群体。"
+              }
+            ],
+            "anchors": [
+              {
+                "text": "spender",
+                "index": 99
+              },
+              {
+                "text": "on",
+                "index": 107
+              }
+            ],
+            "matchedText": "spender on"
+          }
+        ]
+      }
     },
     {
       "id": "article_1770384510650_s2",
@@ -2151,5 +2416,5 @@
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770701009350
+  "lastModified": 1770770033635
 }

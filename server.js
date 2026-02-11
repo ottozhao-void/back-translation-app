@@ -81,11 +81,53 @@ function saveLLMSettings(settings) {
 // POST /api/llm/models - Fetch available models from a provider
 app.post('/api/llm/models', async (req, res) => {
   try {
-    const { baseUrl, apiKey } = req.body;
+    const { baseUrl, apiKey, providerType } = req.body;
     if (!baseUrl || !apiKey) {
       return res.status(400).json({ success: false, error: 'Missing baseUrl or apiKey' });
     }
 
+    // Anthropic doesn't have a /models endpoint
+    if (providerType === 'anthropic') {
+      // Verify API key with a minimal request
+      try {
+        const response = await fetch(`${baseUrl.replace(/\/$/, '')}/v1/messages`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: 'claude-3-haiku-20240307',
+            max_tokens: 1,
+            messages: [{ role: 'user', content: 'test' }],
+          }),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          return res.status(400).json({ success: false, error: `Anthropic API error (${response.status})` });
+        }
+
+        // Return known Anthropic models
+        return res.json({
+          success: true,
+          models: [
+            'claude-sonnet-4-20250514',
+            'claude-3-7-sonnet-20250219',
+            'claude-3-5-sonnet-20241022',
+            'claude-3-5-sonnet-20240620',
+            'claude-3-opus-20240229',
+            'claude-3-sonnet-20240229',
+            'claude-3-haiku-20240307',
+          ],
+        });
+      } catch (e) {
+        return res.status(500).json({ success: false, error: e.message });
+      }
+    }
+
+    // OpenAI-compatible /models endpoint
     const apiUrl = `${baseUrl.replace(/\/$/, '')}/models`;
     const response = await fetch(apiUrl, {
       method: 'GET',
@@ -132,6 +174,10 @@ app.post('/api/llm/execute', async (req, res) => {
       return res.status(400).json({ success: false, error: `Provider not found: ${providerId}` });
     }
 
+    // Migrate old provider configs without providerType
+    const providerType = provider.providerType ||
+      (provider.baseUrl?.includes('anthropic.com') ? 'anthropic' : 'openai');
+
     // Build prompts based on task type
     let systemPrompt, userMessage;
     if (taskType === 'segment') {
@@ -163,52 +209,99 @@ Rules:
       ...(modelParams || {}),
     };
 
-    const requestBody = {
-      model: modelId,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
-      ],
-      temperature: finalParams.temperature,
-      top_p: finalParams.topP,
-      frequency_penalty: finalParams.frequencyPenalty,
-      presence_penalty: finalParams.presencePenalty,
-      response_format: { type: 'json_object' },
-    };
+    let content, usage;
 
-    if (finalParams.maxTokens) requestBody.max_tokens = finalParams.maxTokens;
-    if (finalParams.seed) requestBody.seed = finalParams.seed;
+    if (providerType === 'anthropic') {
+      // Anthropic API format
+      const requestBody = {
+        model: modelId,
+        max_tokens: finalParams.maxTokens || 4096,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+        temperature: finalParams.temperature,
+        top_p: finalParams.topP,
+      };
 
-    const apiUrl = `${provider.baseUrl.replace(/\/$/, '')}/chat/completions`;
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${provider.apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+      const apiUrl = `${provider.baseUrl.replace(/\/$/, '')}/v1/messages`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': provider.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify(requestBody),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      return res.status(400).json({ success: false, error: `API error: ${errorText}` });
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(400).json({ success: false, error: `API error: ${errorText}` });
+      }
+
+      const data = await response.json();
+      const textBlock = data.content?.find(b => b.type === 'text');
+      content = textBlock?.text;
+      usage = data.usage ? {
+        promptTokens: data.usage.input_tokens || 0,
+        completionTokens: data.usage.output_tokens || 0,
+        totalTokens: (data.usage.input_tokens || 0) + (data.usage.output_tokens || 0),
+      } : undefined;
+    } else {
+      // OpenAI-compatible API format
+      const requestBody = {
+        model: modelId,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userMessage },
+        ],
+        temperature: finalParams.temperature,
+        top_p: finalParams.topP,
+        frequency_penalty: finalParams.frequencyPenalty,
+        presence_penalty: finalParams.presencePenalty,
+        response_format: { type: 'json_object' },
+      };
+
+      if (finalParams.maxTokens) requestBody.max_tokens = finalParams.maxTokens;
+      if (finalParams.seed) requestBody.seed = finalParams.seed;
+
+      const apiUrl = `${provider.baseUrl.replace(/\/$/, '')}/chat/completions`;
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${provider.apiKey}`,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return res.status(400).json({ success: false, error: `API error: ${errorText}` });
+      }
+
+      const data = await response.json();
+      content = data.choices?.[0]?.message?.content;
+      usage = data.usage ? {
+        promptTokens: data.usage.prompt_tokens || 0,
+        completionTokens: data.usage.completion_tokens || 0,
+        totalTokens: data.usage.total_tokens || 0,
+      } : undefined;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
     if (!content) {
       return res.status(400).json({ success: false, error: 'No content in response' });
     }
 
-    const parsedContent = JSON.parse(content);
+    // Strip markdown code fences if present
+    let cleanedContent = content.trim();
+    const fenceMatch = cleanedContent.match(/^```(?:json)?\s*\n?([\s\S]*?)\n?```$/);
+    if (fenceMatch) cleanedContent = fenceMatch[1].trim();
+
+    const parsedContent = JSON.parse(cleanedContent);
     res.json({
       success: true,
       data: parsedContent,
-      usage: data.usage ? {
-        promptTokens: data.usage.prompt_tokens || 0,
-        completionTokens: data.usage.completion_tokens || 0,
-        totalTokens: data.usage.total_tokens || 0,
-      } : undefined,
+      usage,
     });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });

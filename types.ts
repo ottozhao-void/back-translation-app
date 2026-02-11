@@ -177,12 +177,19 @@ export type SidebarDisplayMode = 'flat' | 'by-article' | 'by-paragraph';
 // === LLM Platform Types ===
 
 /**
+ * LLM 提供商类型
+ * LLM Provider type - determines API format
+ */
+export type LLMProviderType = 'openai' | 'anthropic';
+
+/**
  * LLM 提供商配置
- * Configuration for an LLM provider (OpenAI, Gemini, Ollama, etc.)
+ * Configuration for an LLM provider (OpenAI, Anthropic, etc.)
  */
 export interface LLMProviderConfig {
-  id: string;                    // Unique identifier, e.g., 'openai', 'gemini', 'custom-1'
-  name: string;                  // Display name, e.g., 'OpenAI', 'Google Gemini'
+  id: string;                    // Unique identifier, e.g., 'openai', 'anthropic', 'custom-1'
+  name: string;                  // Display name, e.g., 'OpenAI', 'Anthropic'
+  providerType: LLMProviderType; // Provider type for API format selection
   baseUrl: string;               // API Base URL
   apiKey: string;                // API Key (stored securely)
   isEnabled: boolean;            // Whether this provider is enabled

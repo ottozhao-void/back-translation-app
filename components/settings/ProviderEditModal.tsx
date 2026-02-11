@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { LLMProviderConfig } from '../../types';
+import { createPortal } from 'react-dom';
+import { LLMProviderConfig, LLMProviderType } from '../../types';
 import { fetchModels, saveProvider } from '../../services/llmService';
 import { XMarkIcon, EyeIcon } from '../Icons';
 
@@ -8,15 +9,6 @@ interface ProviderEditModalProps {
   onSave: (provider: LLMProviderConfig) => void;
   onClose: () => void;
 }
-
-// Common provider presets
-const PROVIDER_PRESETS = [
-  { name: 'OpenAI', baseUrl: 'https://api.openai.com/v1' },
-  { name: 'Google Gemini', baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai' },
-  { name: 'Ollama (Local)', baseUrl: 'http://localhost:11434/v1' },
-  { name: 'OpenRouter', baseUrl: 'https://openrouter.ai/api/v1' },
-  { name: 'Custom', baseUrl: '' },
-];
 
 export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
   provider,
@@ -27,6 +19,9 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
 
   const [name, setName] = useState(provider?.name || '');
   const [baseUrl, setBaseUrl] = useState(provider?.baseUrl || '');
+  const [providerType, setProviderType] = useState<LLMProviderType>(
+    provider?.providerType || 'openai'
+  );
   const [apiKey, setApiKey] = useState(provider?.apiKey || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [models, setModels] = useState<string[]>(provider?.models || []);
@@ -47,13 +42,6 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const handlePresetSelect = (preset: typeof PROVIDER_PRESETS[0]) => {
-    if (preset.name !== 'Custom') {
-      setName(preset.name);
-      setBaseUrl(preset.baseUrl);
-    }
-  };
-
   const handleFetchModels = async () => {
     if (!baseUrl.trim()) {
       setError('Please enter a Base URL');
@@ -64,7 +52,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
     setError(null);
     setFetchSuccess(false);
 
-    const result = await fetchModels(baseUrl, apiKey);
+    const result = await fetchModels(baseUrl, apiKey, providerType);
 
     setIsFetching(false);
 
@@ -103,6 +91,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
     const newProvider: LLMProviderConfig = {
       id: provider?.id || `provider-${Date.now()}`,
       name: name.trim(),
+      providerType,
       baseUrl: baseUrl.trim(),
       apiKey: apiKey.trim(),
       isEnabled: true,
@@ -122,7 +111,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div
         className="absolute inset-0 backdrop-blur-sm transition-opacity"
@@ -151,24 +140,41 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
         <div className="flex max-h-[60vh]">
           {/* Left Panel - API Configuration */}
           <div className="flex-1 p-6 space-y-4 overflow-y-auto custom-scrollbar border-r border-[var(--glass-border)]">
-            {/* Presets (only for new providers) */}
-            {!isEditing && (
-              <div className="flex flex-wrap gap-2 mb-4">
-                {PROVIDER_PRESETS.map((preset) => (
-                  <button
-                    key={preset.name}
-                    onClick={() => handlePresetSelect(preset)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      name === preset.name
-                        ? 'bg-[var(--surface-active)] text-[var(--text-main)]'
-                        : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-main)]'
-                    }`}
-                  >
-                    {preset.name}
-                  </button>
-                ))}
+            {/* Provider Type Selection - API Format */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium" style={{ color: 'var(--text-main)' }}>
+                Provider Type
+              </label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setProviderType('openai')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    providerType === 'openai'
+                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--glass-border)]'
+                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-transparent'
+                  }`}
+                >
+                  OpenAI
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setProviderType('anthropic')}
+                  className={`flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    providerType === 'anthropic'
+                      ? 'bg-[var(--surface-active)] text-[var(--text-main)] border border-[var(--glass-border)]'
+                      : 'bg-[var(--surface-hover)] text-[var(--text-secondary)] hover:text-[var(--text-main)] border border-transparent'
+                  }`}
+                >
+                  Anthropic
+                </button>
               </div>
-            )}
+              <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                {providerType === 'anthropic'
+                  ? 'Uses Anthropic API format (Claude models)'
+                  : 'Uses OpenAI-compatible API format'}
+              </p>
+            </div>
 
             {/* Name Input */}
             <div className="space-y-2">
@@ -179,7 +185,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., OpenAI, My Local Ollama"
+                placeholder="e.g., OpenAI, Anthropic"
                 className="w-full px-4 py-2.5 rounded-lg text-sm transition-all input-glow"
                 style={{
                   backgroundColor: 'var(--surface-hover)',
@@ -198,7 +204,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
                 type="text"
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
-                placeholder="https://api.openai.com/v1"
+                placeholder={providerType === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com/v1'}
                 className="w-full px-4 py-2.5 rounded-lg text-sm font-mono transition-all input-glow"
                 style={{
                   backgroundColor: 'var(--surface-hover)',
@@ -343,6 +349,7 @@ export const ProviderEditModal: React.FC<ProviderEditModalProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

@@ -41,14 +41,14 @@ function sendJson(res: ServerResponse, status: number, data: unknown): void {
  */
 export async function handleFetchModels(req: IncomingMessage, res: ServerResponse): Promise<void> {
   try {
-    const body = await parseBody<{ baseUrl: string; apiKey: string }>(req);
+    const body = await parseBody<{ baseUrl: string; apiKey: string; providerType?: 'openai' | 'anthropic' }>(req);
 
     if (!body.baseUrl || !body.apiKey) {
       sendJson(res, 400, { success: false, error: 'Missing baseUrl or apiKey' });
       return;
     }
 
-    const result = await fetchModels(body.baseUrl, body.apiKey);
+    const result = await fetchModels(body.baseUrl, body.apiKey, body.providerType);
     sendJson(res, result.success ? 200 : 400, result);
 
   } catch (error) {
