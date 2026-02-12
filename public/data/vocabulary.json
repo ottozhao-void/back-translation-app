@@ -2,6 +2,39 @@
   "version": 1,
   "items": [
     {
+      "id": "vocab_1770853084084_imep",
+      "text": "on",
+      "normalizedText": "on",
+      "type": "word",
+      "definition": "Used as a preposition to indicate the specific area, subject, or category that money, time, or effort is being directed toward. In the context of spending or investment, it identifies the target of the expenditure.",
+      "examples": [
+        {
+          "en": "The company decided to spend more on marketing to reach a wider audience.",
+          "zh": "公司决定在营销上投入更多资金，以触及更广泛的受众。"
+        },
+        {
+          "en": "He wasted a lot of time on social media instead of studying for his exams.",
+          "zh": "他把大量时间浪费在社交媒体上，而不是为考试做准备。"
+        },
+        {
+          "en": "The government is increasing its investment on public infrastructure this year.",
+          "zh": "政府今年正在增加对公共基础设施的投资。"
+        }
+      ],
+      "sources": [
+        {
+          "sentenceId": "article_1770384510650_s1",
+          "en": "For the first time in history, China has surpassed the United States to become the world’s leading spender on research and development.",
+          "zh": "历史上首次，中国超越美国成为全球研发支出第一大国。",
+          "addedAt": 1770853084084
+        }
+      ],
+      "status": "enriched",
+      "createdAt": 1770853084084,
+      "updatedAt": 1770853093489,
+      "definitionZh": "介词，用于表示金钱、时间或精力投入的具体领域、对象或类别。在“花费”或“投资”的语境下，它指明了资金的用途或购买的对象。"
+    },
+    {
       "id": "vocab_1770694430134_dfid",
       "text": "Takes the Top Spot",
       "normalizedText": "takes the top spot",
@@ -68,5 +101,5 @@
       "definitionZh": "水龙头。指通过管道控制液体（尤其是水）流出的装置。在技术文档中，它常被用来比喻持续不断的数据流，强调数据是可以被开启、关闭或管理的，而不是一个整体的数据块。"
     }
   ],
-  "lastModified": 1770701091824
+  "lastModified": 1770853093489
 }

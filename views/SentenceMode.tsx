@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode, TagInfo, SYSTEM_TAGS } from '../types';
-import { fetchSentences, saveSentences, migrateAllSentences, patchSentence } from '../utils/sentenceLoader';
+import { fetchSentences, saveSentences, migrateAllSentences, migrateSubmissionTypes, patchSentence } from '../utils/sentenceLoader';
 import { calculatePracticeStats } from '../utils/practiceStats';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
 import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
@@ -264,6 +264,17 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           console.log('Migration complete');
         }
 
+        // Migrate legacy submission types ('diff', 'llm' -> 'submitted')
+        data = migrateSubmissionTypes(data);
+        const needsTypeMigration = data.some(s => {
+          const checkType = (t?: { type?: string }) => t && (t.type === 'diff' || t.type === 'llm');
+          return checkType(s.userTranslationZh) || checkType(s.userTranslationEn);
+        });
+        if (needsTypeMigration) {
+          await saveSentences(data);
+          console.log('Submission type migration complete');
+        }
+
         setSentences(data);
       } catch (error) {
         console.error('Failed to load sentences:', error);
@@ -372,8 +383,8 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
           updatedSentence.userTranslationEn = translation;
         }
 
-        // Update practice stats if this is a real submission (not draft)
-        if (translation.type !== 'draft' && durationMs && durationMs > 0) {
+        // Update practice stats only for submitted translations (not drafts)
+        if (translation.type === 'submitted' && durationMs && durationMs > 0) {
           updatedSentence.practiceStats = calculatePracticeStats(s.practiceStats, durationMs, now);
         }
 
@@ -385,10 +396,8 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
       return updated;
     });
 
-    // Return to detail view after submission (if not a draft)
-    if (translation.type !== 'draft') {
-      setViewMode('detail');
-    }
+    // No automatic view switching - let user stay in practice mode
+    // User can navigate back to detail view via the Back button if desired
   };
 
   // Handle import success - add new sentences to state

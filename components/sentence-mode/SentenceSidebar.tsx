@@ -21,12 +21,13 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
   let statusIcon = '○'; // Not started
   let statusColor = 'text-gray-400';
   if (translation) {
-    if (translation.type === 'draft') {
-      statusIcon = '◐';
-      statusColor = 'text-yellow-400';
-    } else {
+    if (translation.type === 'submitted') {
       statusIcon = '●';
       statusColor = 'text-emerald-400';
+    } else {
+      // Draft or any other legacy type
+      statusIcon = '◐';
+      statusColor = 'text-yellow-400';
     }
   }
 

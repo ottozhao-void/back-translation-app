@@ -100,12 +100,12 @@ export const parseMarkdownArticle = (text: string, id: string): Article => {
     const userTransZhStr = userZhParagraphs[i];
     const userTransEnStr = userEnParagraphs[i];
     
-    const userTranslationZh: UserTranslation | undefined = (userTransZhStr && userTransZhStr !== "(no translation)") 
-      ? { type: 'diff', text: userTransZhStr, timestamp: Date.now() } 
+    const userTranslationZh: UserTranslation | undefined = (userTransZhStr && userTransZhStr !== "(no translation)")
+      ? { type: 'submitted', text: userTransZhStr, timestamp: Date.now() }
       : undefined;
 
     const userTranslationEn: UserTranslation | undefined = (userTransEnStr && userTransEnStr !== "(no translation)")
-      ? { type: 'diff', text: userTransEnStr, timestamp: Date.now() }
+      ? { type: 'submitted', text: userTransEnStr, timestamp: Date.now() }
       : undefined;
 
     content.push({

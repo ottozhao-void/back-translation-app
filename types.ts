@@ -1,10 +1,18 @@
-export type FeedbackMode = 'diff' | 'llm' | 'draft';
+/**
+ * Translation submission status
+ * - 'draft': Auto-saved incomplete translation (not counted in practice stats)
+ * - 'submitted': User has checked/completed the translation
+ */
+export type SubmissionType = 'draft' | 'submitted';
+
+/** @deprecated Use SubmissionType instead. Kept for backward compatibility. */
+export type FeedbackMode = SubmissionType;
 
 export interface TranslationRecord {
-  type: FeedbackMode;
+  type: SubmissionType;
   text: string;
   timestamp: number;
-  score?: number;
+  score?: number;  // Reserved for backward compatibility with historical data
 }
 
 export interface UserTranslation extends TranslationRecord {
@@ -321,8 +329,8 @@ export interface PracticeHistoryEntry {
   direction: 'en-to-zh' | 'zh-to-en';      // 练习方向
   timestamp: number;                       // 练习时间戳
   text: string;                            // 用户的翻译文本
-  type: FeedbackMode;                      // 反馈类型: 'diff' | 'llm' | 'draft'
-  score?: number;                          // AI评分 (仅 LLM 模式)
+  type: SubmissionType;                    // 提交状态: 'draft' | 'submitted'
+  score?: number;                          // Reserved for backward compatibility
   // 反规范化字段，用于展示
   originalEn: string;                      // 原句英文
   originalZh: string;                      // 原句中文

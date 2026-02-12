@@ -106,7 +106,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
     const duration = stopTimer();
 
     const translation: UserTranslation = {
-      type: 'diff', // Using diff mode for mobile (simplified)
+      type: 'submitted',
       text: userInput.trim(),
       timestamp: Date.now(),
     };

@@ -62,7 +62,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     if (existingTranslation) {
       setInputValue(existingTranslation.text);
       lastSavedText.current = existingTranslation.text;
-      setIsSubmitted(existingTranslation.type !== 'draft');
+      setIsSubmitted(existingTranslation.type === 'submitted');
       setIsFlipped(false);
     } else {
       setInputValue('');
@@ -77,7 +77,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
     // Focus input after animation
     setTimeout(() => {
-      if (!existingTranslation || existingTranslation.type === 'draft') {
+      if (!existingTranslation || existingTranslation.type !== 'submitted') {
         inputRef.current?.focus();
       }
     }, 300);
@@ -123,7 +123,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
     setIsSubmitted(true);
     setIsFlipped(true); // Flip to show reference
     onSubmit(sentence.id, {
-      type: 'diff', // Simple mode - no LLM scoring
+      type: 'submitted',
       text: inputValue,
       timestamp: Date.now()
     }, duration);

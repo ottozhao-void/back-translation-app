@@ -28,9 +28,8 @@ export const HistoryEntry: React.FC<HistoryEntryProps> = ({ entry, onNavigate })
   // 获取类型标签
   const getTypeLabel = () => {
     if (entry.type === 'draft') return '草稿';
-    if (entry.type === 'diff') return 'diff';
-    if (entry.score !== undefined) return `${entry.score}分`;
-    return 'LLM';
+    // All submitted translations show a simple checkmark
+    return '✓';
   };
 
   return (

@@ -10,17 +10,17 @@
       "paragraphId": "article-1.md_p0",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "这本书可以被用于课堂教学或者自学。",
         "timestamp": 1770634251531
       },
       "userTranslationEn": {
-        "type": "llm",
+        "type": "submitted",
         "text": "This book can be used for teaching or self-learning. Its main audience is Chinese translatiors and senior student of English practicing translation. I hope, however, this guide can be helpful to other Chinese who need to write in English, those include, journalism, affair worker,  people who are involved in business, tourism, advertisment and other lines of work that needs English writting, also who wish to better master English",
         "timestamp": 1766878286787,
         "history": [
           {
-            "type": "diff",
+            "type": "submitted",
             "text": "Naturally, readers who open this book will have reached varying levels of skill in their second language. But to one degree or another, the work of all but the most highly trained and experienced among them will inevitably contain elements of Chinglish. Chinglish, of course, is that misshapen, hybrid language that s neither English nor Chinese but that might be described as\" English with Chinese characteristics.\"",
             "timestamp": 1765897861899
           }
@@ -78,19 +78,19 @@
       "paragraphId": "article-1.md_p1",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "自然，翻阅这本书的读者，他们的第二语言的水平是不同的。但除了那些受过高强度训练或者有着丰富经验的人之外，他们的翻译中都有着或多或少的中式英语。当然，中式英语是一种畸形的，混合的语言，既不是英文也不是中文，而更像是一种具有中文特色的英文。",
         "timestamp": 1766099926403,
         "score": 88,
         "history": [
           {
-            "type": "llm",
+            "type": "submitted",
             "text": "自然而然的，打开这本书的读者都在他们的第二语言中达到了一定的水平。但即便是他们其中的那些受过高强度训练或者有着丰富经验的人依旧在翻译中有着或多或少的中式英语。中式英语既不是英文也不是中文，而更像是一种具有中文特色的英文，一种混合语言。",
             "timestamp": 1765899354753,
             "score": 65
           },
           {
-            "type": "llm",
+            "type": "submitted",
             "text": "自然，打开这本书的读者都在他们的第二语言中达到了一定的水平。但即便是他们其中的那些受过高强度训练或者有着丰富经验的人依旧在翻译中有着或多或少的中式英语。中式英语既不是英文也不是中文，而更像是一种具有中文特色的英文，一种混合语言。",
             "timestamp": 1765899769705,
             "score": 69
@@ -147,7 +147,7 @@
       "paragraphId": "article-1.md_p2",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "在写这本指导的时候，我假设这本书的中文读者已经具备了基础的英语语法知识，如果想再次对复习这些知识的话，可以参考其他相关书籍。我的写作目的是向那些翻译工作者，包括其他直接用英语写作的读者，展示如何识别他们初稿中的中式英语以及如何修改来去除中式英语。换句话说，这本书是为了帮助读者将他们的作品变成真正的英语，就像一位受过教育的母语工作者所写的一样。",
         "timestamp": 1766101123396,
         "score": 82
@@ -190,7 +190,7 @@
       "paragraphId": "article-1.md_p3",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "在新华社，中国日报，外文出版社以及中央翻译局这些单位中，翻译这项任务通常会被交给高级翻译工作者或者是高级编辑，也可能是那些外国润色工作者，这类人或多或少都有能力来处理这个任务。但实际上，原翻译者或者说写手自己可以完成这些中的大部分工作。这也是为什么在这本书中我有时候称呼他们为翻译工作者，有时候为润色工作者，或是修订者，这些词之前并不互相冲突，每位译者在审阅自己初稿时都可以并且应该是他自己的润色者。",
         "timestamp": 1766103273668,
         "score": 72
@@ -251,7 +251,7 @@
       "paragraphId": "article-1.md_p4",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "这里的中式英语例子，也就是案例中的A版本，都是真实的。也就是说，尽管出于教学目的，其中的一些进行了简化，但无一是凭空捏造的。大多数例子都来源于翻译初稿中，并且在刊登之前都经过了修正，其中的一些取自发表刊物，比如官方文件、中国日报，以及一些其他的英文杂志。只有来自于外国刊物的例子才会被标明出处，比如遥远西方，经济学达人又或者是美国报纸。",
         "timestamp": 1766185960452,
         "score": 78
@@ -318,7 +318,7 @@
       "paragraphId": "article-1.md_p5",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "对于某个取自初译稿的中式英语例句，除了极少数情况，本书提供的改进意见（也就是B版本）来自于审核该例句的润色者。但是，如果 A 版本出现在发表刊物中，我就会给出我认为应该做出的改进。不论是哪种情况，所提供的B版本都不一定是唯一正确的版本。相比于科学，翻译更像是一门手艺，任何领域的手艺人都有着其就某一技术问题最佳方案的独特观点。",
         "timestamp": 1770484179315
       },
@@ -372,7 +372,7 @@
       "paragraphId": "article-1.md_p6",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "似乎由一位对中文知之甚少的人来写这种类型的书有点考虑欠佳了。但我的信心和资质来自我对翻译的大量思考。此外，在1980到1990期间，我曾以改稿人的身份在北京工作了8年，首先是在外研社，其次是在中央编译局（专门对马克思、恩格斯、列宁和斯大林的作品进行编译和翻译的机构）。在那些年里，我有机会和许多中国翻译者进行过密切的合作，从刚出校园的新手译者，到能力卓群的资深教授。我从他们身上学到了很多。",
         "timestamp": 1766704576045,
         "history": [],
@@ -440,7 +440,7 @@
       "paragraphId": "article-1.md_p7",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "即使有着这些经历作为背景，但如果没有来自两位资深顾问的珍贵帮助，来自他们对我初稿的重复阅读，我也很难完成这本书。第一位是我的好朋友姜桂华，她作为前中央编译局英文处处长，带着专业审稿人那般挑剔的眼光检查书中的每一个例句。第二位是我的丈夫拉里，他作为作家和职业新闻工作者的经验以及长年在中国从事教育和译稿润色的经历，都给了我很大帮助。这两位学识渊博的编辑，且各自的语言都达到了母语水平，给出的建议和批评都非常直接且不可或缺。",
         "timestamp": 1766707557706,
         "history": [],
@@ -496,7 +496,7 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p0",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "学习的本质是平静。学习不是一场竞争，而是一段需要耐心才能走完的旅程。最重要的，学习不是为了能够兴奋。不是一个需要聚集庞大能量或者强制自己行动的过程。正相反，学习应该是一个平稳且从容不迫进步的过程。",
         "timestamp": 1766876515989,
         "history": [],
@@ -564,7 +564,7 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p1",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "我们通常将学习的念头与灵感爆发和高涨的热情相关联。但是那些时刻稍纵即逝，持续不了多久。而真正的学习则存在于我们每天平静且寻常的每一步中。关键在于坚持下去，不被快结果的压力所左右。大多数时候，我们认为学习就应该是刻苦且剧烈的，能够带来大量的去肾上腺素。在现实中，最显著的学习通常是那些需要你主动，但又不至于带来过多压力的。学习关乎找到平衡，可以让你感到平稳而 不是疯狂。",
         "timestamp": 1767052235636,
         "history": [],
@@ -656,19 +656,19 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p2",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "学习不是一场竞争，更像是一场需要耐心才可以走完的旅程。做到平静学习是有技巧的。首先，设置清晰的目标是非常有必要的，你要明白你想要什么，对于那些没有必要的急事，则不需要给自己太大负担。接下来，将学习内容拆分成一个个微小且容易管理的任务。每一个小任务都必须清晰且伸伸手就可以完成，这样可以在完成时会带来满足感。还有一点至关重要，那就是将自身的专注点放在完成度而非完美度上，允许自己犯错误，并不要因为而感到愧疚。按照上述方法，循序渐进来打造一个稳固的基础。没有必要去匆匆忙忙，平静下来，一步一步来，你会有所进步的。 ",
         "timestamp": 1767485394664,
         "score": 72,
         "history": [
           {
-            "type": "llm",
+            "type": "submitted",
             "text": "学习不是一场竞争，更像是一场需要耐心才可以走完的旅程。做到平静学习是有技巧的。首先，设置清晰的目标是非常有必要的，你要明白你想要什么，对于那些没有必要的急事，则不需要给自己太大负担。接下来，将学习内容拆分成一个个微小且容易管理的任务。每一个小任务都必须清晰且伸伸手就可以完成，这样可以在完成时会带来满足感。还有一点至关重要，那就是将自身的专注点放在完成度而非完美度上，允许自己犯错误，并不要因为而感到愧疚。按照上述方法，循序渐进来打造一个稳固的基础。没有必要去匆匆忙忙，平静下来，一步一步来，你会有所进步的。",
             "timestamp": 1767483541839,
             "score": 72
           },
           {
-            "type": "llm",
+            "type": "submitted",
             "text": "学习不是一场竞争，更像是一场需要耐心才可以走完的旅程。做到平静学习是有技巧的。首先，设置清晰的目标是非常有必要的，你要明白你想要什么，对于那些没有必要的急事，则不需要给自己太大负担。接下来，将学习内容拆分成一个个微小且容易管理的任务。每一个小任务都必须清晰且伸伸手就可以完成，这样可以在完成时会带来满足感。还有一点至关重要，那就是将自身的专注点放在完成度而非完美度上，允许自己犯错误，并不要因为而感到愧疚。按照上述方法，循序渐进来打造一个稳固的基础。没有必要去匆匆忙忙，平静下来，一步一步来，你会有所进步的。",
             "timestamp": 1767485040566,
             "score": 72
@@ -773,7 +773,7 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p3",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "要想真正学到点东西，我们需要接受我们当前的状态，无论它看上去有多么不完美。我们总是急切的渴望改变，渴望进入到一下阶段。但真切的成长始于自我接受——认识到自己当前的位置以及要去的方向。这种自我觉知并不会限制我们，相反，它给予了我们充分的自由来意图清晰且明确的走好前进路上的每一步。通过接受我们目前的处境，我们就可以；冷静且高效来计划下一步，而不再需要来强迫自己。只有当我们接受了当下时刻的自己，我们才开始真正的改变。",
         "timestamp": 1768951735344,
         "history": [],
@@ -853,7 +853,7 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p4",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "llm",
+        "type": "submitted",
         "text": "学习不是逃避我们自身的境遇，而是要考虑他们。当我们学会了接受学习路上的挑战和不适时，我们就具备了韧性。在这个基础上，我们可以逐步塑造自己的未来。理解改变需要时间和耐心，我们就不再对及时满足抱有期待而是转向对自身稳定进步的专注。这种平静的态度确保了成长的持续和成就的意义性。基于现实设置不会压垮你的目标，并且逐步增加学习的复杂性。这样，你没有强迫去学习但也得到了进步。当我们学会了对自身节奏的掌握，我们才解锁了学习真正的潜力。",
         "timestamp": 1769037884310,
         "history": [],
@@ -957,7 +957,7 @@
       "paragraphId": "1766636093980_the_essence_of_learning_is_tranquilit.json_p5",
       "createdAt": 1770284174484,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "学习需要忍受无聊的勇气。对微小任务枯燥单调的重复练习正是真正发展专业技能的训练场地。这个过程中非常容易被伴随新颖和兴奋而来的愿景分散注意力，但正是那些平凡的时刻才是成长扎根的地方。无论是再次阅读某一章节还是练习重复的技能，关键是持之以恒。这个过程可能会偶尔感到枯燥，但掌握也正是在这个过程中建立起来的。学习真正的价值并不在于看到立即的结果，而是体现在习惯、日复一日的重复和即使得不到奖励的坚持。这种默默的坚持，才会让你走向精通。",
         "timestamp": 1770284237133
       },
@@ -1048,7 +1048,7 @@
       "createdAt": 1770284174484,
       "lastPracticed": 1770331165773,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "在宾夕法尼亚大学的开学致辞中，奥斯卡获奖者丹泽尔华盛顿从他的失败而不是成功的角度出发分享了人生一课，",
         "timestamp": 1770331165773
       },
@@ -1066,7 +1066,7 @@
       "createdAt": 1770284174484,
       "lastPracticed": 1770332185996,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "他传达的核心信息“向前倒”鼓励我们接受风险，并将其视为迈向伟大必不可少的一步，这无疑是挑战了“小心推进”的传统智慧。",
         "timestamp": 1770332185996
       },
@@ -1084,7 +1084,7 @@
       "createdAt": 1770284174484,
       "lastPracticed": 1770335414865,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "向前跌倒的理念",
         "timestamp": 1770335414865
       },
@@ -1619,7 +1619,7 @@
       "createdAt": 1770338833593,
       "lastPracticed": 1770339733369,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "许多网民戏称其为哭哭马并与其产生了强烈的共鸣。哭哭马也变为了精疲力竭职员的象征，有许多人调侃道：“笑笑马是结束工作后的你，哭哭马则是正在工作的你。”",
         "timestamp": 1770339733369
       },
@@ -1672,7 +1672,7 @@
       "order": 0,
       "lastPracticed": 1770765794012,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "科研和发展全球性变化：中国夺得首位",
         "timestamp": 1770765794012
       },
@@ -2040,6 +2040,19 @@
             "matchedText": "For the first time in history"
           }
         ]
+      },
+      "lastPracticed": 1770851984348,
+      "userTranslationZh": {
+        "type": "submitted",
+        "text": "历史上首次出现了中国在研发上面的投入超过了美国，成为世界上投入最多的国家。",
+        "timestamp": 1770851984347
+      },
+      "practiceStats": {
+        "attempts": 1,
+        "totalTimeMs": 363172,
+        "lastAttemptMs": 363172,
+        "lastPracticedAt": 1770851984348,
+        "bestTimeMs": 363172
       }
     },
     {
@@ -2050,7 +2063,20 @@
       "sourceIndex": 2,
       "createdAt": 1770384510650,
       "articleId": "article_1770384510650",
-      "order": 2
+      "order": 2,
+      "lastPracticed": 1770854959155,
+      "userTranslationZh": {
+        "type": "submitted",
+        "text": "在2024年，中国在研发上的投入为7859亿美元，占全球比例为27.4%。",
+        "timestamp": 1770854959155
+      },
+      "practiceStats": {
+        "attempts": 1,
+        "totalTimeMs": 219502,
+        "lastAttemptMs": 219502,
+        "lastPracticedAt": 1770854959155,
+        "bestTimeMs": 219502
+      }
     },
     {
       "id": "article_1770384510650_s3",
@@ -2182,7 +2208,7 @@
       "createdAt": 1770442289687,
       "lastPracticed": 1770626828859,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "HTTP请求是以流形式到达的，就像水龙头中流出的水，而不是一整个数据块。",
         "timestamp": 1770626828859
       },
@@ -2203,7 +2229,7 @@
       "order": 1,
       "createdAt": 1770442289687,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "你无法立即读出req.body, 只能先用一个桶接住，直到水龙头关闭掉。",
         "timestamp": 1770630116745
       },
@@ -2390,12 +2416,12 @@
       "order": -1,
       "createdAt": 1770453705733,
       "userTranslationZh": {
-        "type": "diff",
+        "type": "submitted",
         "text": "你将复杂的自动化工作分配给Claude并积极参与来纠正错误的方案，相比于预先提供详尽的细节你更能忍受迭代改进的方式。",
         "timestamp": 1770464237271
       },
       "lastPracticed": 1770464237271
     }
   ],
-  "lastModified": 1770772802474
+  "lastModified": 1770854959155
 }

@@ -60,8 +60,8 @@ export function extractAllHistory(sentences: SentencePair[]): PracticeHistoryEnt
       });
     }
 
-    // 也包含当前翻译（如果存在且非草稿）
-    if (sentence.userTranslationZh && sentence.userTranslationZh.type !== 'draft') {
+    // 也包含当前翻译（如果已提交）
+    if (sentence.userTranslationZh && sentence.userTranslationZh.type === 'submitted') {
       entries.push({
         id: `${sentence.id}-zh-${sentence.userTranslationZh.timestamp}`,
         sentenceId: sentence.id,
@@ -94,8 +94,8 @@ export function extractAllHistory(sentences: SentencePair[]): PracticeHistoryEnt
       });
     }
 
-    // 也包含当前翻译（如果存在且非草稿）
-    if (sentence.userTranslationEn && sentence.userTranslationEn.type !== 'draft') {
+    // 也包含当前翻译（如果已提交）
+    if (sentence.userTranslationEn && sentence.userTranslationEn.type === 'submitted') {
       entries.push({
         id: `${sentence.id}-en-${sentence.userTranslationEn.timestamp}`,
         sentenceId: sentence.id,
@@ -171,17 +171,12 @@ export function formatTime(timestamp: number): string {
 
 /**
  * 获取分数对应的状态颜色
- * Returns color class based on score
+ * Returns color class based on submission type
  */
 export function getScoreColor(type: PracticeHistoryEntry['type'], score?: number): string {
   if (type === 'draft') return 'text-gray-400';
-  if (type === 'diff') return 'text-blue-400';
-
-  // LLM mode with score
-  if (score === undefined) return 'text-gray-400';
-  if (score >= 80) return 'text-green-400';
-  if (score >= 60) return 'text-yellow-400';
-  return 'text-red-400';
+  // All submitted entries show blue (regardless of legacy type)
+  return 'text-blue-400';
 }
 
 /**

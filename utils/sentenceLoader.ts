@@ -411,6 +411,91 @@ export const groupByParagraph = (
 // === Data Migration ===
 
 /**
+ * Legacy FeedbackMode values that need migration
+ */
+type LegacyFeedbackMode = 'diff' | 'llm' | 'draft';
+
+/**
+ * Migrates legacy FeedbackMode to SubmissionType
+ * - 'draft' -> 'draft'
+ * - 'diff' -> 'submitted'
+ * - 'llm' -> 'submitted'
+ */
+const migrateSubmissionType = (legacyType: LegacyFeedbackMode): 'draft' | 'submitted' => {
+  if (legacyType === 'draft') return 'draft';
+  return 'submitted'; // Both 'diff' and 'llm' map to 'submitted'
+};
+
+/**
+ * Migrates a UserTranslation object's type field
+ */
+const migrateUserTranslation = (translation: { type?: LegacyFeedbackMode | 'draft' | 'submitted'; text: string; timestamp: number; [key: string]: any }) => {
+  if (!translation || typeof translation.type !== 'string') return translation;
+
+  // If already a new type, return as-is
+  if (translation.type === 'draft' || translation.type === 'submitted') return translation;
+
+  // Migrate legacy types
+  const migratedType = migrateSubmissionType(translation.type as LegacyFeedbackMode);
+  return { ...translation, type: migratedType };
+};
+
+/**
+ * Migrates submission types in sentence data
+ * This ensures old 'diff' and 'llm' types are converted to 'submitted'
+ */
+export const migrateSubmissionTypes = (sentences: SentencePair[]): SentencePair[] => {
+  let migratedCount = 0;
+
+  const result = sentences.map(sentence => {
+    let needsMigration = false;
+    const updated = { ...sentence };
+
+    // Migrate userTranslationZh
+    if (updated.userTranslationZh) {
+      const originalType = updated.userTranslationZh.type;
+      const migratedTranslation = migrateUserTranslation(updated.userTranslationZh);
+      if (migratedTranslation.type !== originalType) {
+        updated.userTranslationZh = migratedTranslation;
+        needsMigration = true;
+      }
+    }
+
+    // Migrate userTranslationEn
+    if (updated.userTranslationEn) {
+      const originalType = updated.userTranslationEn.type;
+      const migratedTranslation = migrateUserTranslation(updated.userTranslationEn);
+      if (migratedTranslation.type !== originalType) {
+        updated.userTranslationEn = migratedTranslation;
+        needsMigration = true;
+      }
+    }
+
+    // Migrate history arrays
+    const migrateHistory = (history?: any[]) => {
+      if (!history) return history;
+      return history.map(record => migrateUserTranslation(record));
+    };
+
+    if (updated.userTranslationZh?.history) {
+      updated.userTranslationZh.history = migrateHistory(updated.userTranslationZh.history);
+    }
+    if (updated.userTranslationEn?.history) {
+      updated.userTranslationEn.history = migrateHistory(updated.userTranslationEn.history);
+    }
+
+    if (needsMigration) migratedCount++;
+    return updated;
+  });
+
+  if (migratedCount > 0) {
+    console.log(`Migrated submission types for ${migratedCount} sentences`);
+  }
+
+  return result;
+};
+
+/**
  * Extracts paragraph order from paragraphId format like "article-1.md_p0" -> 0
  */
 const extractParagraphOrder = (paragraphId: string | undefined): number | undefined => {

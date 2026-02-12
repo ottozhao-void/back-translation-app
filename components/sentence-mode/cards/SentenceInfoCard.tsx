@@ -340,7 +340,7 @@ export const SentenceInfoCard: React.FC<SentenceInfoCardProps> = ({
 
   // Get translation status
   const translation = practiceMode === 'EN_TO_ZH' ? sentence.userTranslationZh : sentence.userTranslationEn;
-  const hasPracticed = translation && translation.type !== 'draft';
+  const hasPracticed = translation && translation.type === 'submitted';
 
   return (
     <div className="flex-1 flex flex-col p-8 overflow-hidden">
