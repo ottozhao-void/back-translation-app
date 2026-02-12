@@ -5,6 +5,9 @@ import { playTextToSpeech } from '../../services/geminiService';
 import { usePracticeTimer } from '../../hooks/usePracticeTimer';
 import { FeedbackSheet, FeedbackData } from '../common/FeedbackSheet';
 import { getTranslationFeedback } from '../../services/llmService';
+import { ClickableText } from '../practice-area/ClickableText';
+import { WordDefinitionTooltip } from '../practice-area/WordDefinitionTooltip';
+import { useWordDefinition } from '../../hooks/useWordDefinition';
 
 interface SentencePracticeAreaProps {
   sentence: SentencePair | null;
@@ -36,6 +39,9 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   const lastSavedText = useRef('');
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Word definition lookup
+  const { selectedWord, isLoading: wordDefLoading, definition: wordDefData, error: wordDefError, lookupWord, dismiss: dismissWordDef } = useWordDefinition();
+
   // Practice timer - don't auto-start, we'll control it manually
   const { formatTime, stop: stopTimer, reset: resetTimer, restart: restartTimer } = usePracticeTimer(false);
 
@@ -58,6 +64,8 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
       resetTimer();
       return;
     }
+
+    dismissWordDef();
 
     if (existingTranslation) {
       setInputValue(existingTranslation.text);
@@ -138,8 +146,14 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
   const handleFlipCard = () => {
     if (isSubmitted) {
+      dismissWordDef();
       setIsFlipped(prev => !prev);
     }
+  };
+
+  const handleWordClick = (word: string, rect: DOMRect) => {
+    const lang = practiceMode === 'EN_TO_ZH' ? 'en' : 'zh';
+    lookupWord(word, sourceText, lang, rect);
   };
 
   // Get LLM feedback on the translation
@@ -271,7 +285,11 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
                   className={`text-xl leading-relaxed font-serif-sc ${practiceMode === 'ZH_TO_EN' ? 'font-medium' : 'font-light'}`}
                   style={{ color: 'var(--text-main)' }}
                 >
-                  {sourceText}
+                  <ClickableText
+                    text={sourceText}
+                    language={practiceMode === 'EN_TO_ZH' ? 'en' : 'zh'}
+                    onWordClick={handleWordClick}
+                  />
                 </p>
               </div>
               {isSubmitted && (
@@ -389,6 +407,18 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
           )}
         </div>
       </div>
+
+      {/* Word Definition Tooltip */}
+      {selectedWord && (
+        <WordDefinitionTooltip
+          word={selectedWord.word}
+          anchorRect={selectedWord.rect}
+          isLoading={wordDefLoading}
+          data={wordDefData || undefined}
+          error={wordDefError || undefined}
+          onClose={dismissWordDef}
+        />
+      )}
 
       {/* Feedback Sheet */}
       <FeedbackSheet

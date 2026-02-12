@@ -593,6 +593,79 @@ export async function getTranslationFeedback(
   }
 }
 
+// ============ Quick Word Definition ============
+
+export interface DefineWordResult {
+  success: boolean;
+  data?: { general: string; contextual: string };
+  error?: string;
+}
+
+/**
+ * Quick word definition lookup during practice
+ * @param word - The word or character to define
+ * @param sentence - The sentence context
+ * @param language - 'en' or 'zh'
+ */
+export async function defineWord(
+  word: string,
+  sentence: string,
+  language: 'en' | 'zh',
+  providerId?: string,
+  modelId?: string
+): Promise<DefineWordResult> {
+  if (!word.trim()) {
+    return { success: false, error: 'No word provided' };
+  }
+
+  // Get default provider/model if not specified
+  if (!providerId || !modelId) {
+    const configResult = await getConfig();
+    if (configResult.success && configResult.config) {
+      const config = configResult.config;
+      const taskConfig = config.taskModels?.['define-word'];
+      providerId = taskConfig?.providerId || config.defaultProvider;
+      modelId = taskConfig?.modelId || config.defaultModel;
+    }
+  }
+
+  if (!providerId || !modelId) {
+    return {
+      success: false,
+      error: 'No LLM provider configured. Please configure one in Settings → AI Models.',
+    };
+  }
+
+  try {
+    const result = await executeTask<{ general: string; contextual: string }>(
+      'define-word',
+      providerId,
+      modelId,
+      { word, sentence, language }
+    );
+
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: {
+          general: result.data.general || '',
+          contextual: result.data.contextual || '',
+        },
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to define word',
+      };
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
 // ============ Vocabulary Enrichment ============
 
 export interface EnrichVocabResult {

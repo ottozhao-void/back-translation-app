@@ -241,6 +241,30 @@ Sentence (Chinese): ${params.sentenceZh || ''}
     }
   },
 
+  // ============ Quick Word Definition ============
+  'define-word': {
+    systemPrompt: (params) => {
+      const lang = params.language === 'en' ? 'English' : 'Chinese';
+      const targetLang = params.language === 'en' ? 'Chinese' : 'English';
+      return `You are a concise bilingual dictionary. Given a ${lang} word/character and its sentence context, return:
+1. "general": Brief general meaning in English (1 line, under 20 words)
+2. "contextual": What it means specifically in this sentence in English (1 line, under 20 words)
+
+For Chinese characters, first identify the full word/phrase the character belongs to, then define that word.
+
+Return JSON: { "general": "...", "contextual": "..." }
+Keep responses extremely short. Only return valid JSON, no additional text.`;
+    },
+    buildUserMessage: (params) => `Word: ${params.word || ''}\nSentence: ${params.sentence || ''}\nLanguage: ${params.language || 'en'}`,
+    parseResponse: (raw: unknown) => {
+      const data = raw as { general?: string; contextual?: string };
+      return {
+        general: data?.general || '',
+        contextual: data?.contextual || '',
+      };
+    }
+  },
+
   // ============ Semantic Sentence Analysis ============
   'analyze-sentence': {
     systemPrompt: `

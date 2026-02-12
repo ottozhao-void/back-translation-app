@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { ClickableText } from '../practice-area/ClickableText';
 
 interface SwipeCardProps {
   frontText: string;
@@ -9,6 +10,7 @@ interface SwipeCardProps {
   canSwipeLeft: boolean;
   canSwipeRight: boolean;
   lang: 'en' | 'zh';
+  onWordClick?: (word: string, rect: DOMRect) => void;
 }
 
 /**
@@ -32,6 +34,7 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
   canSwipeLeft,
   canSwipeRight,
   lang,
+  onWordClick,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
   const [dragOffset, setDragOffset] = useState(0);
@@ -127,7 +130,15 @@ export const SwipeCard: React.FC<SwipeCardProps> = ({
           className={`text-center leading-relaxed ${lang === 'en' ? 'text-lg' : 'text-xl'}`}
           style={{ color: 'var(--text-main)' }}
         >
-          {frontText}
+          {onWordClick ? (
+            <ClickableText
+              text={frontText}
+              language={lang}
+              onWordClick={onWordClick}
+            />
+          ) : (
+            frontText
+          )}
         </p>
 
         {/* Tap hint */}

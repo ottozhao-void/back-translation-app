@@ -6,6 +6,8 @@ import { TranslationInput } from '../../components/mobile/TranslationInput';
 import { usePracticeTimer } from '../../hooks/usePracticeTimer';
 import { FeedbackSheet, FeedbackData } from '../../components/common/FeedbackSheet';
 import { getTranslationFeedback } from '../../services/llmService';
+import { WordDefinitionTooltip } from '../../components/practice-area/WordDefinitionTooltip';
+import { useWordDefinition } from '../../hooks/useWordDefinition';
 
 interface MobilePracticeProps {
   sentence: SentencePair;
@@ -49,6 +51,9 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSentenceIdRef = useRef<string | null>(null); // Start as null to trigger on first mount
 
+  // Word definition lookup
+  const { selectedWord, isLoading: wordDefLoading, definition: wordDefData, error: wordDefError, lookupWord, dismiss: dismissWordDef } = useWordDefinition();
+
   // Practice timer - starts when sentence is displayed
   const { formatTime, stop: stopTimer, restart: restartTimer } = usePracticeTimer(false);
 
@@ -65,6 +70,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
     if (lastSentenceIdRef.current === null || sentence.id !== lastSentenceIdRef.current) {
       setIsFlipped(false);
       restartTimer();
+      dismissWordDef();
       setUserInput(existingTranslation?.text || '');
       lastSentenceIdRef.current = sentence.id;
     }
@@ -117,6 +123,12 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
 
     setIsSubmitting(false);
   };
+
+  // Handle word click for definition lookup
+  const handleWordClick = useCallback((word: string, rect: DOMRect) => {
+    const lang = mode === 'EN_TO_ZH' ? 'en' : 'zh';
+    lookupWord(word, originalText, lang, rect);
+  }, [mode, originalText, lookupWord]);
 
   // Handle swipe gestures
   const handleSwipe = (direction: 'left' | 'right') => {
@@ -193,6 +205,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
           canSwipeLeft={currentIndex < totalCount - 1}
           canSwipeRight={currentIndex > 0}
           lang={mode === 'EN_TO_ZH' ? 'en' : 'zh'}
+          onWordClick={handleWordClick}
         />
       </div>
 
@@ -216,6 +229,18 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
           isSubmitted={isFlipped}
         />
       </div>
+
+      {/* Word Definition Tooltip */}
+      {selectedWord && (
+        <WordDefinitionTooltip
+          word={selectedWord.word}
+          anchorRect={selectedWord.rect}
+          isLoading={wordDefLoading}
+          data={wordDefData || undefined}
+          error={wordDefError || undefined}
+          onClose={dismissWordDef}
+        />
+      )}
 
       {/* Feedback Sheet */}
       <FeedbackSheet

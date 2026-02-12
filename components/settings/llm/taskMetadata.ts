@@ -127,6 +127,12 @@ export const TASK_DEFINITIONS: Record<LLMTaskType, TaskDefinition> = {
     description: 'Semantic analysis for vocabulary',
     category: 'analysis',
   },
+  'define-word': {
+    id: 'define-word',
+    label: 'Word Definition',
+    description: 'Quick word meaning lookup during practice',
+    category: 'learning',
+  },
   custom: {
     id: 'custom',
     label: 'Custom Task',

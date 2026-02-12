@@ -60,6 +60,12 @@ export const DEFAULT_TASK_PARAMS: Record<LLMTaskType, Partial<LLMModelParams>> =
     topP: 1,
   },
 
+  // Quick word definition should be fast and concise
+  'define-word': {
+    temperature: 0.2,
+    topP: 1,
+  },
+
   // Custom tasks balanced for general use
   custom: {
     temperature: 0.7,

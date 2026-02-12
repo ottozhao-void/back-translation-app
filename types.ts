@@ -254,6 +254,7 @@ export type LLMTaskType =
   | 'enrich-vocab'      // Generate definition + examples for vocabulary
   | 'suggest-pattern'   // Extract patterns from sentence
   | 'analyze-sentence'  // Semantic analysis for vocabulary collection
+  | 'define-word'       // Quick word meaning lookup during practice
   | 'custom';           // Custom task with user-provided prompt
 
 /**
