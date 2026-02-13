@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode, TagInfo, SYSTEM_TAGS } from '../types';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { SentencePair, PracticeMode, UserTranslation, AppSettings, Article, PracticeStats, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, ContextFilter } from '../types';
 import { fetchSentences, saveSentences, migrateAllSentences, migrateSubmissionTypes, patchSentence } from '../utils/sentenceLoader';
 import { calculatePracticeStats } from '../utils/practiceStats';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
-import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
+import { SentenceSidebar } from '../components/sentence-mode/SentenceSidebar';
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
 import { FeedbackData } from '../components/common/FeedbackSheet';
 import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { TagPickerModal } from '../components/sentence-mode/TagPickerModal';
-import { SidebarCollapseIcon, SidebarExpandIcon, HomeIcon } from '../components/Icons';
+import { HomeIcon } from '../components/Icons';
 import { HistoryModal } from '../components/HistoryModal';
 import { SearchModal } from '../components/SearchModal';
 import { AVAILABLE_COMMANDS } from '../constants';
@@ -19,6 +19,8 @@ import { LoadingSpinner } from '../components/Skeleton';
 import { GreetingDisplay } from '../components/GreetingDisplay';
 import { VocabularySidebar, VocabularyDetailCard } from '../components/vocabulary';
 import { useVocabulary } from '../hooks/useVocabulary';
+import { getFilteredSentences, findSentenceIndex } from '../utils/sentenceFilters';
+import { SentenceNavBar } from '../components/sentence-mode/SentenceNavBar';
 
 // Helper to match hotkey
 const matchesHotkey = (e: KeyboardEvent, hotkeyString: string): boolean => {
@@ -289,6 +291,18 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
   // Get currently selected sentence
   const currentSentence = sentences.find(s => s.id === selectedId) || null;
 
+  // Get filtered sentences (same logic as sidebar)
+  const filteredSentences = useMemo(
+    () => getFilteredSentences(sentences, contextFilter),
+    [sentences, contextFilter],
+  );
+
+  // Current index within filtered list
+  const currentIndex = useMemo(
+    () => findSentenceIndex(filteredSentences, selectedId),
+    [filteredSentences, selectedId],
+  );
+
   // Handle sentence selection - reset to detail view
   const handleSelectSentence = (id: string) => {
     setSelectedId(id);
@@ -296,6 +310,49 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     setViewMode('detail'); // Always show detail view when selecting a new sentence
     setDetailResetKey(k => k + 1); // Force carousel reset to first card
   };
+
+  // Handle navigation via nav bar - preserve viewMode
+  const handleNavSentence = useCallback((direction: 'prev' | 'next') => {
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+
+    if (newIndex >= 0 && newIndex < filteredSentences.length) {
+      const nextId = filteredSentences[newIndex].id;
+      setSelectedId(nextId);
+      setSelectedVocabId(null);
+      // NOTE: Do NOT reset viewMode - preserve practice state
+      setDetailResetKey(k => k + 1);
+    }
+  }, [currentIndex, filteredSentences]);
+
+  // Keyboard navigation for sentence prev/next
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger if user is typing in an input
+      if (e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement) {
+        return;
+      }
+
+      // Sentence navigation - next
+      const nextCmd = AVAILABLE_COMMANDS.find(c => c.id === 'next');
+      const nextHotkey = appSettings.hotkeys?.next ?? nextCmd?.default ?? '';
+      if (nextHotkey && matchesHotkey(e, nextHotkey)) {
+        e.preventDefault();
+        handleNavSentence('next');
+      }
+
+      // Sentence navigation - prev
+      const prevCmd = AVAILABLE_COMMANDS.find(c => c.id === 'prev');
+      const prevHotkey = appSettings.hotkeys?.prev ?? prevCmd?.default ?? '';
+      if (prevHotkey && matchesHotkey(e, prevHotkey)) {
+        e.preventDefault();
+        handleNavSentence('prev');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [appSettings.hotkeys, handleNavSentence]);
 
   // Handle starting practice from detail view
   const handleStartPractice = useCallback(() => {
@@ -518,6 +575,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onDeleteSentence={handleDeleteSentence}
         onOpenSearch={handleOpenSearch}
         isCollapsed={sidebarCollapsed}
+        onToggleCollapse={toggleSidebar}
         contextFilter={contextFilter}
         onClearContextFilter={handleClearContextFilter}
         onSetContextFilter={setContextFilter}
@@ -527,21 +585,6 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
         onToggleTag={handleToggleTag}
         onOpenTagPicker={handleOpenTagPicker}
       />
-
-      {/* Sidebar Toggle Button - Small icon aligned with header */}
-      <button
-        onClick={toggleSidebar}
-        className="flex-shrink-0 w-5 h-10 flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors rounded-r group self-start mt-4"
-        title={sidebarCollapsed ? 'Expand Sidebar (⌘B)' : 'Collapse Sidebar (⌘B)'}
-        style={{ backgroundColor: 'transparent' }}
-      >
-        <div
-          className="opacity-40 group-hover:opacity-100 transition-opacity"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {sidebarCollapsed ? <SidebarExpandIcon /> : <SidebarCollapseIcon />}
-        </div>
-      </button>
 
       {/* Main Content Area - Sentence Detail, Vocabulary Detail, or Practice Area */}
       {selectedVocabItem ? (
@@ -587,6 +630,14 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
               onSaveFeedback={handleSaveFeedback}
             />
           )}
+
+          {/* Navigation Bar */}
+          <SentenceNavBar
+            currentIndex={currentIndex}
+            total={filteredSentences.length}
+            onPrev={() => handleNavSentence('prev')}
+            onNext={() => handleNavSentence('next')}
+          />
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">

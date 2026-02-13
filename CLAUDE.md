@@ -250,3 +250,5 @@ The AI Models settings use a metadata-driven architecture for task configuration
 - **ModelSelector TypeScript error**: `components/settings/ModelSelector.tsx` has a pre-existing TS error (`Property 'filter' does not exist on type 'unknown'`). This doesn't block builds but shows in `tsc --noEmit`.
 - **prefers-reduced-motion**: `index.html` 中的 `@media (prefers-reduced-motion: reduce)` 使用 `!important` 禁用所有动画/过渡。如果需要保留特定动画，使用 `.motion-safe-transition`（过渡）或 `.motion-safe-animation`（动画）类来豁免。
 - **Flex 布局百分比计算**: 嵌套 flex 容器中使用百分比 `translateX` 时，需要在父容器添加 `min-w-0` 防止 `min-width: auto` 导致计算错误。
+- **依赖倒置原则（DIP）**: 共享类型（如 `ContextFilter`）应定义在 `types.ts` 等底层模块中，而非在组件文件中定义后导出。工具函数不应依赖 UI 组件，否则会违反 DIP 原则，导致可维护性降低。
+- **TypeScript 导入顺序**: 当修改既导出又导入的类型（如 `ContextFilter`）位置时，需先删除组件文件中的导出声明，再更新工具文件的导入，否则 TS 编译器会报 "Import declaration conflicts with local declaration" 错误。

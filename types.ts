@@ -101,6 +101,16 @@ export interface TagStore {
   lastModified: number;
 }
 
+/**
+ * Context filter for sentence filtering (paragraph/article/tag drill-down)
+ * Used by sidebar and navigation bar to maintain consistent filtering
+ */
+export interface ContextFilter {
+  type: 'paragraph' | 'article' | 'tag';
+  id: string;
+  label: string;
+}
+
 // === Sentence Mode Types ===
 
 /**

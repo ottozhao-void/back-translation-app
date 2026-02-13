@@ -26,10 +26,14 @@ export const usePracticeTimer = (autoStart = false): UsePracticeTimerReturn => {
   const [isRunning, setIsRunning] = useState(autoStart);
   const startTimeRef = useRef<number | null>(autoStart ? Date.now() : null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  // Track whether interval was manually set up by restart() to avoid effect race conditions
+  const manuallyStartedRef = useRef(false);
 
   // Update elapsed time every 100ms while running
+  // Effect only handles initial start via start(), not restart() which sets up interval directly
   useEffect(() => {
-    if (isRunning && startTimeRef.current) {
+    // Only auto-start via effect if not manually started by restart()
+    if (isRunning && !manuallyStartedRef.current && startTimeRef.current) {
       intervalRef.current = setInterval(() => {
         setElapsed(Date.now() - startTimeRef.current!);
       }, 100);
@@ -39,6 +43,10 @@ export const usePracticeTimer = (autoStart = false): UsePracticeTimerReturn => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
+      }
+      // Reset manual flag when stopping
+      if (!isRunning) {
+        manuallyStartedRef.current = false;
       }
     };
   }, [isRunning]);
@@ -79,14 +87,27 @@ export const usePracticeTimer = (autoStart = false): UsePracticeTimerReturn => {
   }, []);
 
   // Atomic reset + start operation with stable reference
+  // IMPORTANT: This function directly sets up the interval to avoid race conditions
+  // when isRunning is already true (e.g., when navigating between sentences)
   const restart = useCallback(() => {
+    // Clear any existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+
+    // Reset elapsed time and set new start time
     setElapsed(0);
     startTimeRef.current = Date.now();
     setIsRunning(true);
+
+    // Mark as manually started so effect doesn't interfere
+    manuallyStartedRef.current = true;
+
+    // Directly set up the new interval (don't rely on effect which won't re-run if isRunning is already true)
+    intervalRef.current = setInterval(() => {
+      setElapsed(Date.now() - startTimeRef.current!);
+    }, 100);
   }, []);
 
   const formatTime = useCallback((): string => {

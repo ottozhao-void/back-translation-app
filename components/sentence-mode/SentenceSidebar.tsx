@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { SentencePair, PracticeMode, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, SystemTagId } from '../../types';
+import { SentencePair, PracticeMode, SidebarDisplayMode, TagInfo, SYSTEM_TAGS, SystemTagId, ContextFilter } from '../../types';
 import { ArrowLeftIcon, SearchIcon } from '../Icons';
 import { TagDots } from './TagChip';
+import { getFilteredSentences } from '../../utils/sentenceFilters';
 
 interface SentenceItemProps {
   sentence: SentencePair;
@@ -79,13 +80,6 @@ const SentenceItem: React.FC<SentenceItemProps> = ({ sentence, index, isSelected
     </div>
   );
 };
-
-// Context filter for paragraph/article/tag filtering
-export interface ContextFilter {
-  type: 'paragraph' | 'article' | 'tag';
-  id: string;
-  label: string;
-}
 
 interface SentenceSidebarProps {
   sentences: SentencePair[];
@@ -201,42 +195,33 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   // System tags as array for menu
   const systemTagList = React.useMemo(() => Object.values(SYSTEM_TAGS), []);
 
-  // Get displayed sentences - either filtered by context or all sentences
-  const displayedSentences = React.useMemo(() => {
-    if (!contextFilter) {
-      // Default: show all sentences sorted by creation time (newest first)
-      return [...sentences].sort((a, b) => b.createdAt - a.createdAt);
-    }
+  // Get displayed sentences - use shared filtering utility
+  const displayedSentences = React.useMemo(
+    () => getFilteredSentences(sentences, contextFilter),
+    [sentences, contextFilter],
+  );
 
-    if (contextFilter.type === 'paragraph') {
-      // For paragraph context, sort by sentence order within paragraph
-      return sentences
-        .filter(s => s.paragraphId === contextFilter.id)
-        .sort((a, b) => a.order - b.order);
-    }
-    if (contextFilter.type === 'article') {
-      // For article context, sort by paragraphOrder first, then by sentence order
-      return sentences
-        .filter(s => s.articleId === contextFilter.id)
-        .sort((a, b) => {
-          // First compare by paragraph order (position of paragraph in article)
-          const paraOrderA = a.paragraphOrder ?? 0;
-          const paraOrderB = b.paragraphOrder ?? 0;
-          if (paraOrderA !== paraOrderB) {
-            return paraOrderA - paraOrderB;
-          }
-          // Then compare by sentence order (position within paragraph)
-          return a.order - b.order;
-        });
-    }
-    if (contextFilter.type === 'tag') {
-      // For tag context, filter by tag and sort by creation time
-      return sentences
-        .filter(s => s.tags?.includes(contextFilter.id))
-        .sort((a, b) => b.createdAt - a.createdAt);
-    }
-    return sentences;
-  }, [sentences, contextFilter]);
+  // Calculate counts for each view mode
+  const modeCounts = React.useMemo(() => {
+    // Flat: all sentences
+    const flat = sentences.length;
+
+    // Article: unique articles + standalones
+    const articleSet = new Set<string>();
+    sentences.forEach(s => {
+      articleSet.add(s.articleId || '');
+    });
+    const article = articleSet.size;
+
+    // Paragraph: unique paragraphs + standalones
+    const paragraphSet = new Set<string>();
+    sentences.forEach(s => {
+      paragraphSet.add(s.paragraphId || '');
+    });
+    const paragraph = paragraphSet.size;
+
+    return { flat, article, paragraph };
+  }, [sentences]);
 
   // Group sentences by article, paragraph, or tag for group list view
   const groupList = React.useMemo(() => {
@@ -323,21 +308,25 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
   if (isCollapsed) {
     return (
       <div className="w-10 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full bg-[var(--surface-hover)]/20">
-        {/* Vertical text indicator */}
-        <div className="flex-1 flex items-center justify-center">
+        {/* Vertical text indicator - clickable to expand */}
+        <button
+          onClick={onToggleCollapse}
+          className="flex-1 flex items-center justify-center hover:bg-[var(--surface-hover)] transition-colors"
+          title="Expand Sentences"
+        >
           <span
             className="text-xs font-mono uppercase tracking-widest transform -rotate-90 whitespace-nowrap"
             style={{ color: 'var(--text-secondary)' }}
           >
             {sentences.length} items
           </span>
-        </div>
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="w-72 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full overflow-hidden bg-[var(--surface-hover)]/20 transition-all duration-300">
+    <div className="w-72 flex-shrink-0 border-r border-[var(--glass-border)] flex flex-col h-full overflow-hidden bg-[var(--surface-hover)]/20 transition-all duration-200">
       {/* Header */}
       <div className="p-4 border-b border-[var(--glass-border)] flex-shrink-0">
         <div className="min-w-0">
@@ -351,29 +340,39 @@ export const SentenceSidebar: React.FC<SentenceSidebarProps> = ({
               <span className="truncate">{contextFilter.label}</span>
             </button>
           ) : (
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-mono uppercase tracking-widest truncate" style={{ color: 'var(--text-secondary)' }}>
-                All Sentences
-              </h2>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                {/* Search Button */}
-                {onOpenSearch && (
-                  <button
-                    onClick={onOpenSearch}
-                    className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors"
-                    title="Search"
-                    style={{ color: 'var(--text-secondary)' }}
-                  >
-                    <SearchIcon />
-                  </button>
-                )}
-                <span
-                  className="text-xs px-1.5 py-0.5 rounded-full"
-                  style={{ backgroundColor: 'var(--surface-active)', color: 'var(--text-secondary)' }}
+            <div className="flex items-center justify-between gap-2">
+              {/* Collapse Button - Left side, arrow points right */}
+              {onToggleCollapse && (
+                <button
+                  onClick={onToggleCollapse}
+                  className="p-1 rounded hover:bg-[var(--surface-hover)] transition-colors flex-shrink-0"
+                  title="Collapse"
+                  style={{ color: 'var(--text-secondary)' }}
                 >
-                  {displayedSentences.length}
-                </span>
-              </div>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 18l6-6-6-6" />
+                  </svg>
+                </button>
+              )}
+              {/* Search Button - Center */}
+              {onOpenSearch && (
+                <button
+                  onClick={onOpenSearch}
+                  className="p-1.5 rounded-lg hover:bg-[var(--surface-hover)] transition-colors flex-shrink-0"
+                  title="Search"
+                  style={{ color: 'var(--text-secondary)' }}
+                >
+                  <SearchIcon />
+                </button>
+              )}
+              {/* Spacer */}
+              <div className="flex-1" />
+              {/* Title with count - Right side, dynamic based on display mode */}
+              <h2 className="text-xs font-mono uppercase tracking-widest truncate flex-shrink-0 px-2 py-0.5 rounded-md" style={{ color: 'var(--text-secondary)', backgroundColor: 'var(--surface-active)' }}>
+                {displayMode === 'flat' && `Sentences ${modeCounts.flat}`}
+                {displayMode === 'by-article' && `Articles ${modeCounts.article}`}
+                {displayMode === 'by-paragraph' && `Paragraphs ${modeCounts.paragraph}`}
+              </h2>
             </div>
           )}
         </div>
