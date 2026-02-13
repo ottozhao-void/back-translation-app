@@ -17,6 +17,7 @@ interface MobilePracticeProps {
   onNext: () => void;
   onPrev: () => void;
   onSubmit: (sentenceId: string, translation: UserTranslation, durationMs?: number) => Promise<void>;
+  onSaveFeedback: (sentenceId: string, feedback: FeedbackData) => void;
   appSettings: AppSettings;
 }
 
@@ -38,6 +39,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   onNext,
   onPrev,
   onSubmit,
+  onSaveFeedback,
   appSettings,
 }) => {
   const [isFlipped, setIsFlipped] = useState(false);
@@ -147,11 +149,22 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
   };
 
   // Get LLM feedback on the translation
-  const handleGetFeedback = async () => {
+  const handleGetFeedback = async (arg?: boolean | React.MouseEvent) => {
+    const forceRefresh = typeof arg === 'boolean' ? arg : false;
+
     if (!userInput.trim()) return;
 
     // Open sheet and show loading
     setIsFeedbackOpen(true);
+
+    // Check cache: if !forceRefresh and aiFeedback exists on current translation AND text matches input
+    if (!forceRefresh && existingTranslation?.aiFeedback && existingTranslation.text === userInput.trim()) {
+      setFeedbackData(existingTranslation.aiFeedback);
+      setFeedbackLoading(false);
+      setFeedbackError(undefined);
+      return;
+    }
+
     setFeedbackLoading(true);
     setFeedbackData(undefined);
     setFeedbackError(undefined);
@@ -166,6 +179,7 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
 
     if (result.success && result.data) {
       setFeedbackData(result.data);
+      onSaveFeedback(sentence.id, result.data);
     } else {
       setFeedbackError(result.error || 'Failed to get feedback');
     }
@@ -249,7 +263,9 @@ export const MobilePractice: React.FC<MobilePracticeProps> = ({
         isLoading={feedbackLoading}
         data={feedbackData}
         error={feedbackError}
-        onRetry={handleGetFeedback}
+        onRetry={() => handleGetFeedback(true)}
+        isCached={!!feedbackData}
+        onRegenerate={() => handleGetFeedback(true)}
       />
     </div>
   );

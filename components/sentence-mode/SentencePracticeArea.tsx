@@ -16,6 +16,7 @@ interface SentencePracticeAreaProps {
   onSubmit: (sentenceId: string, translation: UserTranslation, durationMs?: number) => void;
   appSettings: AppSettings;
   onBack?: () => void;
+  onSaveFeedback: (sentenceId: string, feedback: FeedbackData) => void;
 }
 
 export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
@@ -25,6 +26,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   onSubmit,
   appSettings,
   onBack,
+  onSaveFeedback,
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -157,8 +159,24 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
   };
 
   // Get LLM feedback on the translation
-  const handleGetFeedback = async () => {
+  const handleGetFeedback = async (arg?: boolean | React.MouseEvent) => {
     if (!sentence || !inputValue.trim()) return;
+
+    const forceRefresh = typeof arg === 'boolean' ? arg : false;
+
+    // Check cache first
+    const currentTranslation = practiceMode === 'EN_TO_ZH' 
+      ? sentence.userTranslationZh 
+      : sentence.userTranslationEn;
+
+    // Only use cache if input text matches the translation the feedback is attached to
+    if (!forceRefresh && 
+        currentTranslation?.aiFeedback && 
+        currentTranslation.text === inputValue) {
+      setFeedbackData(currentTranslation.aiFeedback);
+      setIsFeedbackOpen(true);
+      return;
+    }
 
     // Open sheet and show loading
     setIsFeedbackOpen(true);
@@ -176,6 +194,7 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
 
     if (result.success && result.data) {
       setFeedbackData(result.data);
+      onSaveFeedback(sentence.id, result.data);
     } else {
       setFeedbackError(result.error || 'Failed to get feedback');
     }
@@ -427,7 +446,9 @@ export const SentencePracticeArea: React.FC<SentencePracticeAreaProps> = ({
         isLoading={feedbackLoading}
         data={feedbackData}
         error={feedbackError}
-        onRetry={handleGetFeedback}
+        onRetry={() => handleGetFeedback(true)}
+        isCached={!!feedbackData}
+        onRegenerate={() => handleGetFeedback(true)}
       />
     </div>
   );

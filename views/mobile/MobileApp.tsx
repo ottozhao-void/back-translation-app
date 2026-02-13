@@ -14,6 +14,7 @@ import { MobileVocabulary } from './MobileVocabulary';
 import { SearchIcon } from '../../components/Icons';
 import { SearchModal } from '../../components/SearchModal';
 import { useVocabulary } from '../../hooks/useVocabulary';
+import { FeedbackData } from '../../components/common/FeedbackSheet';
 
 export type MobileTab = 'home' | 'practice' | 'vocabulary' | 'history' | 'settings';
 
@@ -218,6 +219,34 @@ export const MobileApp: React.FC<MobileAppProps> = ({
     }
   };
 
+  // Handle saving feedback
+  const handleSaveFeedback = async (sentenceId: string, feedback: FeedbackData) => {
+    if (!selectedSentence || selectedSentence.id !== sentenceId) return;
+
+    const currentTrans = practiceMode === 'EN_TO_ZH' 
+      ? selectedSentence.userTranslationZh 
+      : selectedSentence.userTranslationEn;
+
+    if (!currentTrans) return;
+
+    const updatedTrans = {
+      ...currentTrans,
+      aiFeedback: { ...feedback, generatedAt: Date.now() }
+    };
+
+    const updates: Partial<SentencePair> = {};
+    if (practiceMode === 'EN_TO_ZH') {
+      updates.userTranslationZh = updatedTrans;
+    } else {
+      updates.userTranslationEn = updatedTrans;
+    }
+
+    const response = await patchSentence(sentenceId, updates);
+    if (response.success && response.data) {
+      handleSentenceUpdate(response.data);
+    }
+  };
+
   // Go back to home from practice
   const handleBackToHome = () => {
     setActiveTab('home');
@@ -316,6 +345,7 @@ export const MobileApp: React.FC<MobileAppProps> = ({
             onNext={() => handlePracticeNav('next')}
             onPrev={() => handlePracticeNav('prev')}
             onSubmit={handlePracticeSubmit}
+            onSaveFeedback={handleSaveFeedback}
             appSettings={appSettings}
           />
         ) : (

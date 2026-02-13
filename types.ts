@@ -17,6 +17,12 @@ export interface TranslationRecord {
 
 export interface UserTranslation extends TranslationRecord {
   history?: TranslationRecord[];
+  aiFeedback?: {
+    score: number;
+    feedback: string;
+    suggestions: string[];
+    generatedAt: number;
+  };
 }
 
 export interface Paragraph {

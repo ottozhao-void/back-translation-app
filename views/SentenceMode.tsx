@@ -5,6 +5,7 @@ import { calculatePracticeStats } from '../utils/practiceStats';
 import { migrateArticlesToSentences, shouldMigrate } from '../utils/migration';
 import { SentenceSidebar, ContextFilter } from '../components/sentence-mode/SentenceSidebar';
 import { SentencePracticeArea } from '../components/sentence-mode/SentencePracticeArea';
+import { FeedbackData } from '../components/common/FeedbackSheet';
 import { SentenceDetailView } from '../components/sentence-mode/SentenceDetailView';
 import { ImportModal } from '../components/sentence-mode/ImportModal';
 import { TagPickerModal } from '../components/sentence-mode/TagPickerModal';
@@ -400,6 +401,37 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
     // User can navigate back to detail view via the Back button if desired
   };
 
+  // Handle saving AI feedback
+  const handleSaveFeedback = (sentenceId: string, feedback: FeedbackData) => {
+    setSentences(prev => {
+      const updated = prev.map(s => {
+        if (s.id !== sentenceId) return s;
+
+        const updatedSentence = { ...s };
+        // Determine which translation to update based on current mode
+        if (practiceMode === 'EN_TO_ZH') {
+           if (updatedSentence.userTranslationZh) {
+             updatedSentence.userTranslationZh = {
+               ...updatedSentence.userTranslationZh,
+               aiFeedback: { ...feedback, generatedAt: Date.now() }
+             };
+           }
+        } else {
+           if (updatedSentence.userTranslationEn) {
+             updatedSentence.userTranslationEn = {
+               ...updatedSentence.userTranslationEn,
+               aiFeedback: { ...feedback, generatedAt: Date.now() }
+             };
+           }
+        }
+        return updatedSentence;
+      });
+      
+      saveSentences(updated);
+      return updated;
+    });
+  };
+
   // Handle import success - add new sentences to state
   const handleImportSuccess = (newSentences: SentencePair[]) => {
     setSentences(prev => [...prev, ...newSentences]);
@@ -552,6 +584,7 @@ export const SentenceMode: React.FC<SentenceModeProps> = ({ articles, appSetting
               onSubmit={handleSubmit}
               appSettings={appSettings}
               onBack={handleBackToDetail}
+              onSaveFeedback={handleSaveFeedback}
             />
           )}
         </div>

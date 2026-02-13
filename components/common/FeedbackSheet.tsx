@@ -13,6 +13,8 @@ interface FeedbackSheetProps {
   data?: FeedbackData;
   error?: string;
   onRetry: () => void;
+  isCached?: boolean;
+  onRegenerate?: () => void;
 }
 
 /**
@@ -28,6 +30,8 @@ export const FeedbackSheet: React.FC<FeedbackSheetProps> = ({
   data,
   error,
   onRetry,
+  isCached,
+  onRegenerate,
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
 
@@ -90,9 +94,24 @@ export const FeedbackSheet: React.FC<FeedbackSheetProps> = ({
           className="flex items-center justify-between px-6 py-4 border-b"
           style={{ borderColor: 'var(--glass-border)' }}
         >
-          <h2 className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>
-            AI Analysis
-          </h2>
+          <div className="flex items-center gap-3">
+            <h2 className="text-lg font-medium" style={{ color: 'var(--text-main)' }}>
+              AI Analysis
+            </h2>
+            {isCached && onRegenerate && !isLoading && !error && (
+              <button
+                onClick={onRegenerate}
+                className="text-xs px-2 py-1 rounded border transition-colors hover:bg-black/5 dark:hover:bg-white/10"
+                style={{ 
+                  color: 'var(--text-secondary)', 
+                  borderColor: 'var(--glass-border)' 
+                }}
+                title="Regenerate feedback"
+              >
+                Regenerate
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="p-1 rounded-lg hover:bg-white/10 transition-colors"
@@ -185,18 +204,7 @@ export const FeedbackSheet: React.FC<FeedbackSheetProps> = ({
           )}
         </div>
 
-        {/* Footer - Close button for non-error states */}
-        {!isLoading && !error && data && (
-          <div className="px-6 py-4 border-t" style={{ borderColor: 'var(--glass-border)' }}>
-            <button
-              onClick={onClose}
-              className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/5"
-              style={{ color: 'var(--text-secondary)', border: '1px solid var(--glass-border)' }}
-            >
-              Close
-            </button>
-          </div>
-        )}
+        {/* Footer removed per user request - actions moved to header */}
       </div>
 
       {/* Animation keyframes */}
